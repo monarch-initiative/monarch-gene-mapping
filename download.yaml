@@ -1,0 +1,29 @@
+---
+-
+  url: https://fms.alliancegenome.org/download/BGI_MGI.json.gz
+  local_name: data/alliance/BGI_MGI.json.gz
+  tag: alliance_gene
+-
+  url: https://fms.alliancegenome.org/download/BGI_RGD.json.gz
+  local_name: data/alliance/BGI_RGD.json.gz
+  tag: alliance_gene
+-
+  url: https://fms.alliancegenome.org/download/BGI_ZFIN.json.gz
+  local_name: data/alliance/BGI_ZFIN.json.gz
+  tag: alliance_gene
+-
+  url: https://fms.alliancegenome.org/download/BGI_FB.json.gz
+  local_name: data/alliance/BGI_FB.json.gz
+  tag: alliance_gene
+-
+  url: https://fms.alliancegenome.org/download/BGI_SGD.json.gz
+  local_name: data/alliance/BGI_SGD.json.gz
+  tag: alliance_gene
+-
+  url: https://fms.alliancegenome.org/download/BGI_WB.json.gz
+  local_name: data/alliance/BGI_WB.json.gz
+  tag: alliance_gene
+-
+  url: https://fms.alliancegenome.org/download/BGI_XB.json.gz
+  local_name: data/alliance/BGI_XB.json.gz
+  tag: alliance_gene

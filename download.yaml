@@ -1,4 +1,5 @@
 ---
+# Alliance
 -
   url: https://fms.alliancegenome.org/download/BGI_MGI.json.gz
   local_name: data/alliance/BGI_MGI.json.gz
@@ -27,3 +28,9 @@
   url: https://fms.alliancegenome.org/download/BGI_XB.json.gz
   local_name: data/alliance/BGI_XB.json.gz
   tag: alliance_gene
+
+# hgnc
+-
+  url: http://ftp.ebi.ac.uk/pub/databases/genenames/hgnc/tsv/hgnc_complete_set.txt
+  local_name: data/hgnc/hgnc_complete_set.txt
+  tag: hgnc_gene

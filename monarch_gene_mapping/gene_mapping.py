@@ -40,7 +40,7 @@ def alliance_ncbi_mapping() -> DataFrame:
          'BGI_FB.json.gz',
          'BGI_SGD.json.gz',
          'BGI_WB.json.gz',
-         # 'BGI_XB.json.gz'
+         'BGI_XB.json.gz'
     ]
 
     data = []

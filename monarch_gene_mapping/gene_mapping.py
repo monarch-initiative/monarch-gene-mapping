@@ -90,6 +90,10 @@ def generate_gene_mappings() -> DataFrame:
     assert(len(omim_to_hgnc) > 16000)
     mapping_dataframes.append(omim_to_hgnc)
 
+    uniprot_to_hgnc = hgnc_mapping("uniprot_ids", "UniProtKB:", subject_list_delimiter="\\|")
+    assert(len(uniprot_to_hgnc) > 20000)
+    mapping_dataframes.append(uniprot_to_hgnc)
+
     mappings = pd.concat(mapping_dataframes)
 
     return mappings

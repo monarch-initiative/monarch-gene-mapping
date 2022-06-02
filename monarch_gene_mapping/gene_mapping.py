@@ -28,7 +28,8 @@ def bgi2sssom(bgi) -> Dict:
     return {
         "subject_id": ncbi_xref,
         "predicate_id": "skos:exactMatch",
-        "object_id": prim_id
+        "object_id": prim_id,
+        "mapping_justification": "semapv:UnspecifiedMatching",
     }
 
 
@@ -40,7 +41,7 @@ def alliance_ncbi_mapping() -> DataFrame:
          'BGI_FB.json.gz',
          'BGI_SGD.json.gz',
          'BGI_WB.json.gz',
-         # 'BGI_XB.json.gz'
+         'BGI_XB.json.gz'
     ]
 
     data = []
@@ -56,12 +57,23 @@ def alliance_ncbi_mapping() -> DataFrame:
     return gene_maps
 
 
-def hgnc_ncbi_mapping() -> DataFrame:
+def hgnc_mapping(subject_column,
+                 subject_curie_prefix,
+                 predicate_id="skos:exactMatch",
+                 subject_list_delimiter=None) -> DataFrame:
     hgnc = pd.read_csv("data/hgnc/hgnc_complete_set.txt", sep="\t", dtype="string")
-    hgnc.rename(columns={"entrez_id": "subject_id", "hgnc_id": "object_id"}, inplace=True)
-    hgnc["subject_id"] = 'NCBIGene:' + hgnc["subject_id"]
-    hgnc["predicate"] = "skos:exactMatch"
-    hgnc = hgnc[["subject_id", "predicate", "object_id"]]
+
+    hgnc.rename(columns={subject_column: "subject_id", "hgnc_id": "object_id"}, inplace=True)
+
+    # if the subject column has a list, use explode to roll it down and make a SSSOM triple for each
+    if subject_list_delimiter is not None \
+            and len(hgnc[hgnc['subject_id'].str.contains(subject_list_delimiter)]) > 0:
+        hgnc = hgnc.assign(subject_id=hgnc.subject_id.str.split("|")).explode('subject_id')
+
+    hgnc["subject_id"] = subject_curie_prefix + hgnc["subject_id"]
+    hgnc["predicate_id"] = predicate_id
+    hgnc["mapping_justification"] = "semapv:UnspecifiedMatching"
+    hgnc = hgnc[["subject_id", "predicate_id", "object_id", "mapping_justification"]]
     hgnc.dropna(inplace=True)
 
     return hgnc
@@ -71,13 +83,24 @@ def generate_gene_mappings() -> DataFrame:
 
     mapping_dataframes = []
 
-    alliance_ncbi = alliance_ncbi_mapping()
-    assert(len(alliance_ncbi) > 200000)
-    mapping_dataframes.append(alliance_ncbi)
+    ncbi_to_alliance = alliance_ncbi_mapping()
+    assert(len(ncbi_to_alliance) > 200000)
+    mapping_dataframes.append(ncbi_to_alliance)
 
-    hgnc_ncbi = hgnc_ncbi_mapping()
-    assert(len(hgnc_ncbi) > 40000)
-    mapping_dataframes.append(hgnc_ncbi)
+    ncbi_to_hgnc = hgnc_mapping("entrez_id", "NCBIGene:")
+    assert(len(ncbi_to_hgnc) > 40000)
+    mapping_dataframes.append(ncbi_to_hgnc)
+
+    omim_to_hgnc = hgnc_mapping("omim_id", "OMIM:", subject_list_delimiter="\\|")
+    assert(len(omim_to_hgnc) > 16000)
+    mapping_dataframes.append(omim_to_hgnc)
+
+    uniprot_to_hgnc = hgnc_mapping("uniprot_ids",
+                                   "UniProtKB:",
+                                   predicate_id="skos:closeMatch",
+                                   subject_list_delimiter="\\|")
+    assert(len(uniprot_to_hgnc) > 20000)
+    mapping_dataframes.append(uniprot_to_hgnc)
 
     mappings = pd.concat(mapping_dataframes)
 

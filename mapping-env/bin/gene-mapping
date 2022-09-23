@@ -1,0 +1,6 @@
+#!/mnt/dev/TISLAB/monarch-gene-mapping/mapping-env/bin/python
+import sys
+from monarch_gene_mapping.main import typer_app
+
+if __name__ == '__main__':
+    sys.exit(typer_app())

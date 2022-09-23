@@ -11,7 +11,10 @@ def bgi2sssom(bgi) -> Dict:
     """
     gene = bgi['basicGeneticEntity']
     xref = [x['id'].replace("NCBI_Gene", "NCBIGene").replace("NCBI_GENE", "NCBIGene")
-            for x in gene['crossReferences']]
+            for x in gene['crossReferences']
+            if x['id'].startswith("NCBI_Gene:")
+            or x['id'].startswith("UniProtKB:")
+            or x['id'].startswith("ENSEMBL:")]
     prim_id = gene['primaryId'].replace("DRSC:XB:", "Xenbase:")
     if len(xref):
         ncbi_xref = xref[0]

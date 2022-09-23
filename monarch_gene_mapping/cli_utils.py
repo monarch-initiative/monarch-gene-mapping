@@ -1,14 +1,7 @@
-import gzip
-import json
+import gzip, json
 from typing import Dict
-import typer
-import pathlib
-
 import pandas as pd
 from pandas.core.frame import DataFrame
-
-typer_app = typer.Typer()
-
 
 def bgi2sssom(bgi) -> Dict:
     """
@@ -34,13 +27,13 @@ def bgi2sssom(bgi) -> Dict:
 
 def alliance_ncbi_mapping() -> DataFrame:
     alliance_files = [
+         'BGI_FB.json.gz',
          'BGI_MGI.json.gz',
          'BGI_RGD.json.gz',
-         'BGI_ZFIN.json.gz',
-         'BGI_FB.json.gz',
          'BGI_SGD.json.gz',
          'BGI_WB.json.gz',
-         'BGI_XB.json.gz'
+         'BGI_XB.json.gz',
+         'BGI_ZFIN.json.gz',
     ]
 
     data = []
@@ -104,14 +97,3 @@ def generate_gene_mappings() -> DataFrame:
     mappings = pd.concat(mapping_dataframes)
 
     return mappings
-
-
-@typer_app.command()
-def main(output_dir="output"):
-    pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
-    mappings = generate_gene_mappings()
-    mappings.to_csv(f"{output_dir}/gene_mappings.tsv", sep="\t", index=False)
-
-
-if __name__ == "__main__":
-    typer_app()

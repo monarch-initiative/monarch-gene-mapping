@@ -18,7 +18,10 @@ def bgi2sssom(bgi) -> Dict:
     """
     gene = bgi['basicGeneticEntity']
     xref = [x['id'].replace("NCBI_Gene", "NCBIGene").replace("NCBI_GENE", "NCBIGene")
-            for x in gene['crossReferences']]
+            for x in gene['crossReferences']
+            if x['id'].startswith("NCBI_Gene:")
+            or x['id'].startswith("UniProtKB:")
+            or x['id'].startswith("ENSEMBL:")]
     prim_id = gene['primaryId'].replace("DRSC:XB:", "Xenbase:")
     if len(xref):
         ncbi_xref = xref[0]
@@ -34,13 +37,13 @@ def bgi2sssom(bgi) -> Dict:
 
 def alliance_ncbi_mapping() -> DataFrame:
     alliance_files = [
-         'BGI_MGI.json.gz',
-         'BGI_RGD.json.gz',
-         'BGI_ZFIN.json.gz',
-         'BGI_FB.json.gz',
-         'BGI_SGD.json.gz',
-         'BGI_WB.json.gz',
-         'BGI_XB.json.gz'
+        'BGI_MGI.json.gz',
+        'BGI_RGD.json.gz',
+        'BGI_ZFIN.json.gz',
+        'BGI_FB.json.gz',
+        'BGI_SGD.json.gz',
+        'BGI_WB.json.gz',
+        'BGI_XB.json.gz'
     ]
 
     data = []
@@ -79,26 +82,25 @@ def hgnc_mapping(subject_column,
 
 
 def generate_gene_mappings() -> DataFrame:
-
     mapping_dataframes = []
 
     ncbi_to_alliance = alliance_ncbi_mapping()
-    assert(len(ncbi_to_alliance) > 200000)
+    assert (len(ncbi_to_alliance) > 200000)
     mapping_dataframes.append(ncbi_to_alliance)
 
     ncbi_to_hgnc = hgnc_mapping("entrez_id", "NCBIGene:")
-    assert(len(ncbi_to_hgnc) > 40000)
+    assert (len(ncbi_to_hgnc) > 40000)
     mapping_dataframes.append(ncbi_to_hgnc)
 
     omim_to_hgnc = hgnc_mapping("omim_id", "OMIM:", object_list_delimiter="\\|")
-    assert(len(omim_to_hgnc) > 16000)
+    assert (len(omim_to_hgnc) > 16000)
     mapping_dataframes.append(omim_to_hgnc)
 
     uniprot_to_hgnc = hgnc_mapping("uniprot_ids",
                                    "UniProtKB:",
                                    predicate_id="skos:closeMatch",
                                    object_list_delimiter="\\|")
-    assert(len(uniprot_to_hgnc) > 20000)
+    assert (len(uniprot_to_hgnc) > 20000)
     mapping_dataframes.append(uniprot_to_hgnc)
 
     mappings = pd.concat(mapping_dataframes)

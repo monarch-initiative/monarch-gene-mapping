@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "monarch_gene_mapping"
-version = "0.1.2"
+version = "0.1.3"
 description = "Project for mapping source namespaces to preffered namespaces in Monarch Initiative"
 authors = [
     "Tim Putman <putmantime@users.noreply.github.com>",

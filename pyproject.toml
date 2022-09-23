@@ -14,11 +14,12 @@ pandas = "^1.4.2"
 kghub-downloader = "^0.1.14"
 click = "8.0.4"
 typer = "0.4"
+ipython = "^8.5.0"
 
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.scripts]
-generate-mappings = "monarch_gene_mapping.gene_mapping:typer_app"
+gene-mapping = "monarch_gene_mapping.main:typer_app"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

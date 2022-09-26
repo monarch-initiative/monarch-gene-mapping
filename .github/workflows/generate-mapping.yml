@@ -26,4 +26,6 @@ jobs:
           poetry install 
       - 
         name: Generate mapping
-        run: poetry run gene-mapping generate --download
+        run: | 
+          poetry run gene-mapping generate --download
+          head output/gene_mapping.tsv

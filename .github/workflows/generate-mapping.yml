@@ -28,4 +28,4 @@ jobs:
         name: Generate mapping
         run: | 
           poetry run gene-mapping generate --download
-          ls -al
+          ls -al output/

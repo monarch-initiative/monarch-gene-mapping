@@ -1,6 +1,8 @@
 name: Generate Monarch Gene Mapping
 on:
   workflow_dispatch:
+  push:
+    branches: [ main, scheduled-action ]
   schedule:
     - cron: "0 6 * * MON"
 
@@ -12,9 +14,12 @@ jobs:
     strategy:
       max-parallel: 1
     steps:
-      - name: Checkout main branch
+      - 
+        name: Checkout main branch
         uses: actions/checkout@v2
-      - name: Setup environment
+      - 
+        name: Setup environment
         run: pip install poetry && poetry install 
-      - name: Generate mapping
+      - 
+        name: Generate mapping
         run: gene-mapping generate --download

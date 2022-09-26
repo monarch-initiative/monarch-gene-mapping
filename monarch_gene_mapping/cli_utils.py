@@ -30,13 +30,14 @@ def bgi2sssom(bgi) -> Dict:
 
 def alliance_ncbi_mapping() -> DataFrame:
     alliance_files = [
-         'BGI_FB.json.gz',
-         'BGI_MGI.json.gz',
-         'BGI_RGD.json.gz',
-         'BGI_SGD.json.gz',
-         'BGI_WB.json.gz',
-         'BGI_XB.json.gz',
-         'BGI_ZFIN.json.gz',
+        'BGI_FB.json.gz',
+        'BGI_MGI.json.gz',
+        'BGI_RGD.json.gz',
+        'BGI_SGD.json.gz',
+        'BGI_WB.json.gz',
+        'BGI_XBXT.json.gz',
+        'BGI_XBXL.json.gz',
+        'BGI_ZFIN.json.gz',
     ]
 
     data = []

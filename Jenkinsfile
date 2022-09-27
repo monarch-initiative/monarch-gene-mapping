@@ -18,6 +18,7 @@ pipeline {
         }
         stage('upload-mapping-file'){
             steps{
+                sh 'gsutil cp output/gene_mappings.tsv gs://data-public-monarchinitiative/monarch-gene-mapping/${RELEASE}/'
                 sh 'gsutil cp output/gene_mappings.tsv gs://monarch-archive/monarch-gene-mapping/${RELEASE}/'
             }
         }

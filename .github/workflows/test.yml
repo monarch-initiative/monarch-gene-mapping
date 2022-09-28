@@ -29,4 +29,4 @@ jobs:
         run: | 
           poetry run gene-mapping generate --download
           ls -al output/
-          head output/gene_mapping.tsv
+          head output/gene_mappings.tsv

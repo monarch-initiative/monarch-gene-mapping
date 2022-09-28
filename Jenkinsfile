@@ -24,6 +24,7 @@ pipeline {
 
                     gsutil rm gs://data-public-monarchinitiative/monarch-gene-mapping/latest/*
                     gsutil cp gs://data-public-monarchinitiative/monarch-gene-mapping/${RELEASE}/gene_mappings.tsv gs://data-public-monarchinitiative/monarch-gene-mapping/latest/gene_mappings.tsv
+                '''
             }
         }
     }

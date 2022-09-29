@@ -2,6 +2,8 @@ import gzip, json
 from typing import Dict
 import pandas as pd
 from pandas.core.frame import DataFrame
+from typing import List
+
 
 def bgi2sssom(bgi) -> Dict:
     """
@@ -75,6 +77,34 @@ def hgnc_mapping(subject_column,
     return hgnc
 
 
+def add_prefix(prefix, column) -> pd.Series:
+    return prefix + column.astype('str')
+
+
+def ensemble_ncbi_mappings(
+        subject_column: str = "GeneID",
+        subject_curie_prefix: str = "NCBIGene:",
+        object_column: str = "Ensembl_gene_identifier",
+        object_curie_prefix: str = "ENSEMBL:",
+        predicate_id: str = "skos:exactMatch",
+        mapping_justification: str = "semapv:UnspecifiedMatching",
+        tax_ids: List[int] = [9031]) -> DataFrame:
+
+    ensembl_2_gene = pd.read_csv("data/ensembl/gene2ensembl.gz", compression="gzip", sep="\t")
+    ensembl_filtered = ensembl_2_gene.loc[ensembl_2_gene["#tax_id"].isin(tax_ids)].copy()
+
+    ensembl_filtered.loc[:, subject_column] = add_prefix(subject_curie_prefix, ensembl_filtered[subject_column])
+    ensembl_filtered.loc[:, object_column] = add_prefix(object_curie_prefix, ensembl_filtered[object_column])
+    ensembl_filtered.loc[:, "predicate_id"] = predicate_id
+    ensembl_filtered.loc[:, "mapping_justification"] = mapping_justification
+
+    columns = {subject_column: "subject_id", object_column: "object_id"}
+    select_columns = ["subject_id", "predicate_id", "object_id", "mapping_justification"]
+    ensembl_mappings = ensembl_filtered.rename(columns=columns).loc[:, select_columns].drop_duplicates()
+
+    return ensembl_mappings
+
+
 def generate_gene_mappings() -> DataFrame:
 
     mapping_dataframes = []
@@ -97,6 +127,18 @@ def generate_gene_mappings() -> DataFrame:
                                    object_list_delimiter="\\|")
     assert(len(uniprot_to_hgnc) > 20000)
     mapping_dataframes.append(uniprot_to_hgnc)
+
+    ncbi_to_ensembl = ensemble_ncbi_mappings(
+        subject_column="Ensembl_gene_identifier",
+        subject_curie_prefix="ENSEMBL:",
+        object_column="GeneID",
+        object_curie_prefix="NCBIGene:",
+        predicate_id="skos:exactMatch",
+        mapping_justification="semapv:UnspecifiedMatching",
+        tax_ids=[9031]
+    )
+    assert (len(ncbi_to_ensembl) > 15000)
+    mapping_dataframes.append(ncbi_to_ensembl)
 
     mappings = pd.concat(mapping_dataframes)
 

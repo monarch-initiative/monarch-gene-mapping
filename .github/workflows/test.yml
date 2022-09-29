@@ -1,0 +1,32 @@
+name: Generate Monarch Gene Mapping
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, scheduled-action ]
+  schedule:
+    - cron: "0 6 * * MON"
+
+jobs:
+  diff:
+    # Do not run on forks 
+    if: github.repository_owner == 'monarch-initiative'
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+    steps:
+      - 
+        name: Checkout main branch
+        uses: actions/checkout@v2
+      - 
+        name: Setup environment
+        run:  |
+          pip install --upgrade requests
+          export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
+          pip install poetry
+          poetry install 
+      - 
+        name: Generate mapping
+        run: | 
+          poetry run gene-mapping generate --download
+          ls -al output/
+          head output/gene_mappings.tsv

@@ -40,7 +40,7 @@
   tag: hgnc_gene
 
   # ENSEMBL:ENSGAL
-
+-
   url: https://ftp.ncbi.nih.gov/gene/DATA/gene2ensembl.gz
   local_name: data/ensembl/gene2ensembl.gz
   tag: gene_2_ensembl

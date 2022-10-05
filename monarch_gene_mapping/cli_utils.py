@@ -135,7 +135,7 @@ def generate_gene_mappings() -> DataFrame:
         object_curie_prefix="NCBIGene:",
         predicate_id="skos:exactMatch",
         mapping_justification="semapv:UnspecifiedMatching",
-        tax_ids=[9031]
+        tax_ids=[9031, 9615, 9913, 9823]  # Chicken: 9031, Dog: 9615, Cow, 9913, Pig: 9823
     )
     assert (len(ncbi_to_ensembl) > 15000)
     mapping_dataframes.append(ncbi_to_ensembl)

@@ -1,8 +1,7 @@
 import gzip, json
-from typing import Dict
 import pandas as pd
 from pandas.core.frame import DataFrame
-from typing import List
+from typing import Dict, List
 
 
 def bgi2sssom(bgi) -> Dict:
@@ -55,54 +54,73 @@ def alliance_ncbi_mapping() -> DataFrame:
     return gene_maps
 
 
-def hgnc_mapping(subject_column,
-                 object_curie_prefix,
-                 predicate_id="skos:exactMatch",
-                 object_list_delimiter=None) -> DataFrame:
-    hgnc = pd.read_csv("data/hgnc/hgnc_complete_set.txt", sep="\t", dtype="string")
-
-    hgnc.rename(columns={"hgnc_id": "subject_id", subject_column: "object_id"}, inplace=True)
-
-    # if the object column has a list, use explode to roll it down and make a SSSOM triple for each
-    if object_list_delimiter is not None \
-            and len(hgnc[hgnc['object_id'].str.contains(object_list_delimiter)]) > 0:
-        hgnc = hgnc.assign(object_id=hgnc.object_id.str.split("|")).explode('object_id')
-
-    hgnc["object_id"] = object_curie_prefix + hgnc["object_id"]
-    hgnc["predicate_id"] = predicate_id
-    hgnc["mapping_justification"] = "semapv:UnspecifiedMatching"
-    hgnc = hgnc[["subject_id", "predicate_id", "object_id", "mapping_justification"]]
-    hgnc.dropna(inplace=True)
-
-    return hgnc
-
-
-def add_prefix(prefix, column) -> pd.Series:
+def add_prefix(prefix: str, column: pd.Series) -> pd.Series:
+    """
+    Add a prefix to all values in a series
+    :param prefix: Prefix for values in series
+    :param column: Series of values for prefixing
+    :return:
+    """
     return prefix + column.astype('str')
 
 
-def ensemble_ncbi_mappings(
-        subject_column: str = "GeneID",
-        subject_curie_prefix: str = "NCBIGene:",
-        object_column: str = "Ensembl_gene_identifier",
-        object_curie_prefix: str = "ENSEMBL:",
+def df_mappings(
+        df: DataFrame,
+        subject_column: str,  # "GeneID"
+        subject_curie_prefix: str,  # "NCBIGene:"
+        object_column: str,  # "Ensembl_gene_identifier"
+        object_curie_prefix: str,  # "ENSEMBL:"
         predicate_id: str = "skos:exactMatch",
         mapping_justification: str = "semapv:UnspecifiedMatching",
-        tax_ids: List[int] = [9031]) -> DataFrame:
+        filter_column: str = "",  # "#tax_id",
+        filter_ids: List[int] = None  # [9031]
+) -> DataFrame:
+    """
+    Create specified mappings from DataFrame
+    :param df: DataFrame source for mapping values
+    :param subject_column: Column containing subject ID's
+    :param subject_curie_prefix: Curie for prefixing subject ID's
+    :param object_column: Column containing object ID's
+    :param object_curie_prefix: Curie for prefixing object ID's
+    :param predicate_id: String for predicate ID
+    :param mapping_justification: String for mapping justification
+    :param filter_column: Column to filter DataFrame on
+    :param filter_ids:
+    :return:
+    """
+    # Filtering could be extracted and done before passing df but I think there is value keeping it here.
+    if filter_column != "" and isinstance(filter_ids, list):
+        # Create a copy to guarantee we aren't working on a slice
+        df_filtered = df.loc[df[filter_column].isin(filter_ids), :].copy()
+    else:
+        # Create copy so we don't modify the original DataFrame
+        df_filtered = df.copy()
 
-    ensembl_2_gene = pd.read_csv("data/ensembl/gene2ensembl.gz", compression="gzip", sep="\t")
-    ensembl_filtered = ensembl_2_gene.loc[ensembl_2_gene["#tax_id"].isin(tax_ids)].copy()
-
-    ensembl_filtered.loc[:, subject_column] = add_prefix(subject_curie_prefix, ensembl_filtered[subject_column])
-    ensembl_filtered.loc[:, object_column] = add_prefix(object_curie_prefix, ensembl_filtered[object_column])
-    ensembl_filtered.loc[:, "predicate_id"] = predicate_id
-    ensembl_filtered.loc[:, "mapping_justification"] = mapping_justification
+    df_filtered.loc[:, "predicate_id"] = predicate_id
+    df_filtered.loc[:, "mapping_justification"] = mapping_justification
 
     columns = {subject_column: "subject_id", object_column: "object_id"}
     select_columns = ["subject_id", "predicate_id", "object_id", "mapping_justification"]
-    ensembl_mappings = ensembl_filtered.rename(columns=columns).loc[:, select_columns].drop_duplicates()
+    df_select = df_filtered.rename(columns=columns).loc[:, select_columns]
 
-    return ensembl_mappings
+    df_select.loc[:, subject_column] = add_prefix(subject_curie_prefix, df_filtered[subject_column])
+    df_select.loc[:, object_column] = add_prefix(object_curie_prefix, df_filtered[object_column])
+    df_map = df_select.drop_duplicates().dropna()
+
+    return df_map
+
+
+def id_list_to_sssom(df: DataFrame, column: str, delimiter: str) -> DataFrame:
+    """
+    Expand columns with delimiter separated lists to SSSOM triple for each
+    :param df: DataFrame for column expansion
+    :param column: Column name for expansion
+    :param delimiter: Delimiter for splitting column
+    :return:
+    """
+    assign_kwargs = {column: df[column].str.split(delimiter)}
+    df_sssom = df.assign(**assign_kwargs).explode(column).copy()
+    return df_sssom
 
 
 def generate_gene_mappings() -> DataFrame:
@@ -113,31 +131,56 @@ def generate_gene_mappings() -> DataFrame:
     assert(len(ncbi_to_alliance) > 200000)
     mapping_dataframes.append(ncbi_to_alliance)
 
-    ncbi_to_hgnc = hgnc_mapping("entrez_id", "NCBIGene:")
+    hgnc_df = pd.read_csv("data/hgnc/hgnc_complete_set.txt", sep="\t", dtype="string")
+    ncbi_to_hgnc = df_mappings(
+        df=hgnc_df,
+        subject_column="hgnc_id",
+        subject_curie_prefix="HGNC:",
+        object_column="entrez_id",
+        object_curie_prefix="NCBIGene:",
+        predicate_id="skos:exactMatch",
+        mapping_justification="semapv:UnspecifiedMatching"
+    )
     assert(len(ncbi_to_hgnc) > 40000)
     mapping_dataframes.append(ncbi_to_hgnc)
 
-    omim_to_hgnc = hgnc_mapping("omim_id", "OMIM:", object_list_delimiter="\\|")
+    omim_to_hgnc = df_mappings(
+        df=id_list_to_sssom(hgnc_df, "omim_id", "|"),
+        subject_column="hgnc_id",
+        subject_curie_prefix="HGNC:",
+        object_column="omim_id",
+        object_curie_prefix="OMIM:",
+        predicate_id="skos:exactMatch",
+        mapping_justification="semapv:UnspecifiedMatching"
+    )
     assert(len(omim_to_hgnc) > 16000)
     mapping_dataframes.append(omim_to_hgnc)
 
-    uniprot_to_hgnc = hgnc_mapping("uniprot_ids",
-                                   "UniProtKB:",
-                                   predicate_id="skos:closeMatch",
-                                   object_list_delimiter="\\|")
+    uniprot_to_hgnc = df_mappings(
+        df=id_list_to_sssom(hgnc_df, "uniprot_ids", "|"),
+        subject_column="hgnc_id",
+        subject_curie_prefix="HGNC:",
+        object_column="uniprot_ids",
+        object_curie_prefix="UniProtKB:",
+        predicate_id="skos:closeMatch",
+        mapping_justification="semapv:UnspecifiedMatching"
+    )
     assert(len(uniprot_to_hgnc) > 20000)
     mapping_dataframes.append(uniprot_to_hgnc)
 
-    ncbi_to_ensembl = ensemble_ncbi_mappings(
+    ensembl_df = pd.read_csv("data/ensembl/gene2ensembl.gz", compression="gzip", sep="\t")
+    ncbi_to_ensembl = df_mappings(
+        df=ensembl_df,
         subject_column="Ensembl_gene_identifier",
         subject_curie_prefix="ENSEMBL:",
         object_column="GeneID",
         object_curie_prefix="NCBIGene:",
         predicate_id="skos:exactMatch",
         mapping_justification="semapv:UnspecifiedMatching",
-        tax_ids=[9031]
+        filter_column="#tax_id",
+        filter_ids=[9031, 9615, 9913, 9823]  # Chicken: 9031, Dog: 9615, Cow, 9913, Pig: 9823
     )
-    assert (len(ncbi_to_ensembl) > 15000)
+    assert (len(ncbi_to_ensembl) > 70000)
     mapping_dataframes.append(ncbi_to_ensembl)
 
     mappings = pd.concat(mapping_dataframes)

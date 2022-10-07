@@ -101,10 +101,10 @@ def df_mappings(
 
     columns = {subject_column: "subject_id", object_column: "object_id"}
     select_columns = ["subject_id", "predicate_id", "object_id", "mapping_justification"]
-    df_select = df_filtered.rename(columns=columns).loc[:, select_columns]
+    df_select = df_filtered.rename(columns=columns).loc[:, select_columns].copy()
 
-    df_select.loc[:, subject_column] = add_prefix(subject_curie_prefix, df_filtered[subject_column])
-    df_select.loc[:, object_column] = add_prefix(object_curie_prefix, df_filtered[object_column])
+    df_select["subject_id"] = add_prefix(subject_curie_prefix, df_select["subject_id"])
+    df_select["object_id"] = add_prefix(object_curie_prefix, df_select["object_id"])
     df_map = df_select.drop_duplicates().dropna()
 
     return df_map

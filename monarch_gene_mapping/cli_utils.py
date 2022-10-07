@@ -125,6 +125,15 @@ def id_list_to_sssom(df: DataFrame, column: str, delimiter: str) -> DataFrame:
     return df_sssom
 
 
+def preprocess_alliance_df(df: DataFrame, exclude_taxon: List, include_curie: List) -> DataFrame:
+    taxon_filter = ~df["TaxonID"].isin(exclude_taxon)
+    curie_filter = df["GeneID"].str.contains('|'.join(include_curie))
+    self_filter = df["GeneID"] != df["GlobalCrossReferenceID"]
+
+    df_filtered = df.loc[taxon_filter & curie_filter & self_filter, :]
+    return df_filtered.copy()
+
+
 def generate_gene_mappings() -> DataFrame:
 
     mapping_dataframes = []
@@ -132,6 +141,22 @@ def generate_gene_mappings() -> DataFrame:
     ncbi_to_alliance = alliance_ncbi_mapping()
     assert(len(ncbi_to_alliance) > 200000)
     mapping_dataframes.append(ncbi_to_alliance)
+
+    alliance_file = "data/alliance/GENECROSSREFERENCE_COMBINED.tsv.gz"
+    alliance_df = pd.read_csv(alliance_file, sep="\t", dtype="string", comment='#')
+    alliance_df_filtered = preprocess_alliance_df(
+        df=alliance_df,
+        exclude_taxon=["NCBITaxon:9606", "NCBITaxon:2697049"],
+        include_curie=["MGI:", "RGD:", "FB:", "WB:", "ZFIN:", "Xenbase:"])
+    ncbi_to_alliance = df_mappings(
+        df=alliance_df_filtered,
+        subject_column="GeneID",
+        subject_curie_prefix="",
+        object_column="GlobalCrossReferenceID",
+        object_curie_prefix="",
+        predicate_id="skos:exactMatch",
+        mapping_justification="semapv:UnspecifiedMatching"
+    )
 
     hgnc_df = pd.read_csv("data/hgnc/hgnc_complete_set.txt", sep="\t", dtype="string")
     ncbi_to_hgnc = df_mappings(

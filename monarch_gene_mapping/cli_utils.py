@@ -67,25 +67,25 @@ def add_prefix(prefix: str, column: pd.Series) -> pd.Series:
 def df_mappings(
         df: DataFrame,
         subject_column: str,  # "GeneID"
-        subject_curie_prefix: str,  # "NCBIGene:"
         object_column: str,  # "Ensembl_gene_identifier"
-        object_curie_prefix: str,  # "ENSEMBL:"
         predicate_id: str = "skos:exactMatch",
         mapping_justification: str = "semapv:UnspecifiedMatching",
         filter_column: str = "",  # "#tax_id",
+        subject_curie_prefix: str = None,  # "NCBIGene:"
+        object_curie_prefix: str = None,  # "ENSEMBL:"
         filter_ids: List[int] = None  # [9031]
 ) -> DataFrame:
     """
     Create specified mappings from DataFrame
     :param df: DataFrame source for mapping values
     :param subject_column: Column containing subject ID's
-    :param subject_curie_prefix: Curie for prefixing subject ID's
     :param object_column: Column containing object ID's
-    :param object_curie_prefix: Curie for prefixing object ID's
     :param predicate_id: String for predicate ID
     :param mapping_justification: String for mapping justification
     :param filter_column: Column to filter DataFrame on
     :param filter_ids:
+    :param subject_curie_prefix: Optional curie for prefixing subject ID's
+    :param object_curie_prefix: Optional curie for prefixing object ID's
     :return:
     """
     # Filtering could be extracted and done before passing df but I think there is value keeping it here.
@@ -103,8 +103,10 @@ def df_mappings(
     select_columns = ["subject_id", "predicate_id", "object_id", "mapping_justification"]
     df_select = df_filtered.rename(columns=columns).loc[:, select_columns].copy()
 
-    df_select["subject_id"] = add_prefix(subject_curie_prefix, df_select["subject_id"])
-    df_select["object_id"] = add_prefix(object_curie_prefix, df_select["object_id"])
+    if subject_curie_prefix is not None:
+        df_select["subject_id"] = add_prefix(subject_curie_prefix, df_select["subject_id"])
+    if object_curie_prefix is not None:
+        df_select["object_id"] = add_prefix(object_curie_prefix, df_select["object_id"])
     df_map = df_select.drop_duplicates().dropna()
 
     return df_map
@@ -135,7 +137,6 @@ def generate_gene_mappings() -> DataFrame:
     ncbi_to_hgnc = df_mappings(
         df=hgnc_df,
         subject_column="hgnc_id",
-        subject_curie_prefix="HGNC:",
         object_column="entrez_id",
         object_curie_prefix="NCBIGene:",
         predicate_id="skos:exactMatch",
@@ -147,7 +148,6 @@ def generate_gene_mappings() -> DataFrame:
     omim_to_hgnc = df_mappings(
         df=id_list_to_sssom(hgnc_df, "omim_id", "|"),
         subject_column="hgnc_id",
-        subject_curie_prefix="HGNC:",
         object_column="omim_id",
         object_curie_prefix="OMIM:",
         predicate_id="skos:exactMatch",
@@ -159,7 +159,6 @@ def generate_gene_mappings() -> DataFrame:
     uniprot_to_hgnc = df_mappings(
         df=id_list_to_sssom(hgnc_df, "uniprot_ids", "|"),
         subject_column="hgnc_id",
-        subject_curie_prefix="HGNC:",
         object_column="uniprot_ids",
         object_curie_prefix="UniProtKB:",
         predicate_id="skos:closeMatch",
@@ -168,13 +167,24 @@ def generate_gene_mappings() -> DataFrame:
     assert(len(uniprot_to_hgnc) > 20000)
     mapping_dataframes.append(uniprot_to_hgnc)
 
-    ensembl_df = pd.read_csv("data/ensembl/gene2ensembl.gz", compression="gzip", sep="\t")
+    ensembl_to_hgnc = df_mappings(
+        df=hgnc_df,
+        subject_column="hgnc_id",
+        object_column="ensembl_gene_id",
+        object_curie_prefix="ENSEMBL:",
+        predicate_id="skos:exactMatch",
+        mapping_justification="semapv:UnspecifiedMatching"
+    )
+    assert(len(ensembl_to_hgnc) > 40000)
+    mapping_dataframes.append(ensembl_to_hgnc)
+
+    ensembl_df = pd.read_csv("data/ncbi/gene2ensembl.gz", compression="gzip", sep="\t")
     ncbi_to_ensembl = df_mappings(
         df=ensembl_df,
-        subject_column="Ensembl_gene_identifier",
-        subject_curie_prefix="ENSEMBL:",
-        object_column="GeneID",
-        object_curie_prefix="NCBIGene:",
+        subject_column="GeneID",
+        subject_curie_prefix="NCBIGene:",
+        object_column="Ensembl_gene_identifier",
+        object_curie_prefix="ENSEMBL:",
         predicate_id="skos:exactMatch",
         mapping_justification="semapv:UnspecifiedMatching",
         filter_column="#tax_id",
@@ -182,6 +192,7 @@ def generate_gene_mappings() -> DataFrame:
     )
     assert (len(ncbi_to_ensembl) > 70000)
     mapping_dataframes.append(ncbi_to_ensembl)
+
 
     mappings = pd.concat(mapping_dataframes)
 

@@ -39,9 +39,9 @@
   local_name: data/hgnc/hgnc_complete_set.txt
   tag: hgnc_gene
 
-  # ENSEMBL:ENSGAL
+  # NCBI
 -
   url: https://ftp.ncbi.nih.gov/gene/DATA/gene2ensembl.gz
-  local_name: data/ensembl/gene2ensembl.gz
-  tag: gene_2_ensembl
+  local_name: data/ncbi/gene2ensembl.gz
+  tag: ncbi
 

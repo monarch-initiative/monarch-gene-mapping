@@ -1,2 +1,2 @@
 # monarch-gene-mapping
-Code for mapping source namespaces to preffered namespacing
+Code for mapping source namespaces to preferred namespacing

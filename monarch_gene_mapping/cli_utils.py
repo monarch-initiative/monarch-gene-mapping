@@ -95,7 +95,7 @@ def alliance_mapping() -> DataFrame:
         df=alliance_df,
         exclude_taxon=["NCBITaxon:9606", "NCBITaxon:2697049"],
         include_curie=["MGI:", "RGD:", "FB:", "WB:", "ZFIN:", "Xenbase:"],
-        include_xref_curie=["ENSEMBL:", "NCBI_Gene:"]
+        include_xref_curie=["ENSEMBL:", "NCBI_Gene:", "UniProtKB:"]
     )
     alliance_mappings = df_mappings(
         df=alliance_df_filtered,

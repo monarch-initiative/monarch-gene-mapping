@@ -157,6 +157,8 @@ def generate_gene_mappings() -> DataFrame:
         predicate_id="skos:exactMatch",
         mapping_justification="semapv:UnspecifiedMatching"
     )
+    # assert(len(ncbi_to_alliance) > 200000)
+    # mapping_dataframes.append(ncbi_to_alliance)
 
     hgnc_df = pd.read_csv("data/hgnc/hgnc_complete_set.txt", sep="\t", dtype="string")
     ncbi_to_hgnc = df_mappings(

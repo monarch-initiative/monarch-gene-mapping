@@ -4,55 +4,6 @@ from pandas.core.frame import DataFrame
 from typing import Dict, List
 
 
-def bgi2sssom(bgi) -> Dict:
-    """
-    Convert a single Alliance BGI document to a SSSOM row
-    :param bgi:
-    :return:
-    """
-    gene = bgi['basicGeneticEntity']
-    xref = [x['id'].replace("NCBI_Gene", "NCBIGene").replace("NCBI_GENE", "NCBIGene")
-            for x in gene['crossReferences']
-            if x['id'].startswith("NCBI_Gene:")
-            or x['id'].startswith("UniProtKB:")
-            or x['id'].startswith("ENSEMBL:")]
-    prim_id = gene['primaryId'].replace("DRSC:XB:", "Xenbase:")
-    if len(xref):
-        ncbi_xref = xref[0]
-    else:
-        return None
-    return {
-        "subject_id": prim_id,
-        "predicate_id": "skos:exactMatch",
-        "object_id": ncbi_xref,
-        "mapping_justification": "semapv:UnspecifiedMatching",
-    }
-
-
-def alliance_ncbi_mapping() -> DataFrame:
-    alliance_files = [
-        'BGI_FB.json.gz',
-        'BGI_MGI.json.gz',
-        'BGI_RGD.json.gz',
-        'BGI_SGD.json.gz',
-        'BGI_WB.json.gz',
-        'BGI_XBXT.json.gz',
-        'BGI_XBXL.json.gz',
-        'BGI_ZFIN.json.gz',
-    ]
-
-    data = []
-    for file in alliance_files:
-        with gzip.open(f"data/alliance/{file}", 'rt', encoding='UTF-8') as zipfile:
-            genes = json.load(zipfile)
-        for index, bgi in enumerate(genes['data']):
-            sssom = bgi2sssom(bgi)
-            if sssom is not None:
-                data.append(sssom)
-
-    gene_maps = pd.DataFrame(data)
-    return gene_maps
-
 
 def add_prefix(prefix: str, column: pd.Series) -> pd.Series:
     """
@@ -124,14 +75,49 @@ def id_list_to_sssom(df: DataFrame, column: str, delimiter: str) -> DataFrame:
     df_sssom = df.assign(**assign_kwargs).explode(column).copy()
     return df_sssom
 
+def preprocess_alliance_df(df: DataFrame,
+                           exclude_taxon: List,
+                           include_curie: List,
+                           include_xref_curie: List) -> DataFrame:
+    taxon_filter = ~df["TaxonID"].isin(exclude_taxon)
+    curie_filter = df["GeneID"].str.contains('|'.join(include_curie))
+    self_filter = df["GeneID"] != df["GlobalCrossReferenceID"]
+    xref_curie_filter = df["GlobalCrossReferenceID"].str.startswith(tuple(include_xref_curie))
+
+    df_filtered = df.loc[taxon_filter & curie_filter & self_filter & xref_curie_filter, :]
+    return df_filtered.copy()
+
+def alliance_mapping() -> DataFrame:
+
+    alliance_file = "data/alliance/GENECROSSREFERENCE_COMBINED.tsv.gz"
+    alliance_df = pd.read_csv(alliance_file, sep="\t", dtype="string", comment='#')
+    alliance_df_filtered = preprocess_alliance_df(
+        df=alliance_df,
+        exclude_taxon=["NCBITaxon:9606", "NCBITaxon:2697049"],
+        include_curie=["MGI:", "RGD:", "FB:", "WB:", "ZFIN:", "Xenbase:"],
+        include_xref_curie=["ENSEMBL:", "NCBI_Gene:", "UniProtKB:"]
+    )
+    alliance_mappings = df_mappings(
+        df=alliance_df_filtered,
+        subject_column="GeneID",
+        subject_curie_prefix="",
+        object_column="GlobalCrossReferenceID",
+        object_curie_prefix="",
+        predicate_id="skos:exactMatch",
+        mapping_justification="semapv:UnspecifiedMatching"
+    )
+
+    return alliance_mappings
+
+
 
 def generate_gene_mappings() -> DataFrame:
 
     mapping_dataframes = []
 
-    ncbi_to_alliance = alliance_ncbi_mapping()
-    assert(len(ncbi_to_alliance) > 200000)
-    mapping_dataframes.append(ncbi_to_alliance)
+    alliance_mappings = alliance_mapping()
+    assert(len(alliance_mappings) > 400000)
+    mapping_dataframes.append(alliance_mappings)
 
     hgnc_df = pd.read_csv("data/hgnc/hgnc_complete_set.txt", sep="\t", dtype="string")
     ncbi_to_hgnc = df_mappings(

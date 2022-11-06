@@ -179,6 +179,22 @@ def generate_gene_mappings() -> DataFrame:
     assert (len(ncbi_to_ensembl) > 70000)
     mapping_dataframes.append(ncbi_to_ensembl)
 
+    uniprot_df = pd.read_csv("data/uniprot/idmapping_selected.tab.gz", compression="gzip", sep="\t")
+    uniprot_to_ncbi = df_mappings(
+        df=uniprot_df,
+        subject_column="UniProtKB-AC",
+        subject_curie_prefix="UniProtKB",
+        object_column="GeneID",
+        object_curie_prefix="NCBIGene:",
+        predicate_id="skos:exactMatch",
+        mapping_justification="semapv:UnspecifiedMatching",
+        filter_column="NCBI-taxon",
+
+        # Chicken: 9031, Dog: 9615, Cow, 9913, Pig: 9823, Emericella (Aspergillus) nidulans: 227321
+        filter_ids=[9031, 9615, 9913, 9823, 227321]
+    )
+    assert (len(uniprot_to_ncbi) > 70000)
+    mapping_dataframes.append(uniprot_to_ncbi)
 
     mappings = pd.concat(mapping_dataframes)
 

@@ -17,3 +17,8 @@
   local_name: data/ncbi/gene2ensembl.gz
   tag: ncbi
 
+  # UniProtKB - caution! *huge* 11 GB archive file!
+-
+  url: https://ftp.uniprot.org/pub/databases/uniprot/knowledgebase/idmapping/idmapping_selected.tab.gz
+  local_name: data/uniprot/idmapping_selected.tab.gz
+  tag: uniprot

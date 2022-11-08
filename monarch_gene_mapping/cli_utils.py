@@ -144,6 +144,8 @@ def generate_gene_mappings() -> DataFrame:
     assert(len(alliance_mappings) > 400000)
     mapping_dataframes.append(alliance_mappings)
 
+    print("Generating HGNC to NCBI Gene mappings...")
+
     hgnc_df = pd.read_csv("data/hgnc/hgnc_complete_set.txt", sep="\t", dtype="string")
     ncbi_to_hgnc = df_mappings(
         df=hgnc_df,
@@ -156,6 +158,8 @@ def generate_gene_mappings() -> DataFrame:
     assert(len(ncbi_to_hgnc) > 40000)
     mapping_dataframes.append(ncbi_to_hgnc)
 
+    print("Generating HGNC to OMIM mappings...")
+
     omim_to_hgnc = df_mappings(
         df=id_list_to_sssom(hgnc_df, "omim_id", "|"),
         subject_column="hgnc_id",
@@ -166,6 +170,8 @@ def generate_gene_mappings() -> DataFrame:
     )
     assert(len(omim_to_hgnc) > 16000)
     mapping_dataframes.append(omim_to_hgnc)
+
+    print("Generating HGNC to UniProtKB mappings...")
 
     uniprot_to_hgnc = df_mappings(
         df=id_list_to_sssom(hgnc_df, "uniprot_ids", "|"),
@@ -178,6 +184,8 @@ def generate_gene_mappings() -> DataFrame:
     assert(len(uniprot_to_hgnc) > 20000)
     mapping_dataframes.append(uniprot_to_hgnc)
 
+    print("Generating HGNC to ENSEMBL Gene mappings...")
+
     ensembl_to_hgnc = df_mappings(
         df=hgnc_df,
         subject_column="hgnc_id",
@@ -188,6 +196,8 @@ def generate_gene_mappings() -> DataFrame:
     )
     assert(len(ensembl_to_hgnc) > 40000)
     mapping_dataframes.append(ensembl_to_hgnc)
+
+    print("Generating NCBIGene to ENSEMBL Gene mappings...")
 
     ensembl_df = pd.read_csv("data/ncbi/gene2ensembl.gz", compression="gzip", sep="\t")
     ncbi_to_ensembl = df_mappings(
@@ -210,14 +220,18 @@ def generate_gene_mappings() -> DataFrame:
     # This file should be prefiltered down to target species using the 'uniprot_idmapping_preprocess.py' script
     # The set of target species is currently hard-coded at the top of this filter script. To distinguish it from
     # the original data, we assume that the filtered file is renamed to 'data/uniprot/idmapping.tsv.gz'.
+
+    print("Generating UniProtKB to NCBI Gene mappings...")
+
     uniprot_df = pd.read_csv(
         "data/uniprot/idmapping.tsv.gz",
-        names=UNIPROT_ID_MAPPING_SELECTED_COLUMNS, compression="gzip", sep="\t"
+        names=UNIPROT_ID_MAPPING_SELECTED_COLUMNS,
+        compression="gzip", sep="\t", low_memory=False
     )
     uniprot_to_ncbi = df_mappings(
         df=uniprot_df,
         subject_column="UniProtKB-AC",
-        subject_curie_prefix="UniProtKB",
+        subject_curie_prefix="UniProtKB:",
         object_column="GeneID",
         object_curie_prefix="NCBIGene:",
         predicate_id="skos:exactMatch",

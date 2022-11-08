@@ -20,12 +20,12 @@
   # UniProtKB - caution! the original UniProt file is a *huge* 11 GB archive file!
   # This file may be prefiltered down to target species using the 'uniprot_idmapping_preprocess.py' script:
   #
-  # usage: uniprot_idmappin_preprocess.py [-h] [-d DIRECTORY] [-s SOURCE] [-t TARGET] [-n NUMBER_OF_LINES]
+  # usage: uniprot_idmapping_preprocess.py [-h] [-d DIRECTORY] [-s SOURCE] [-t TARGET] [-n NUMBER_OF_LINES]
   #
   # optional arguments:
   #  -h, --help            show this help message and exit
   #  -d DIRECTORY, --directory DIRECTORY
-  #                        Working directory containing the data (default: 'data/uniprot')
+  #                        Working directory containing the data (default: '../data/uniprot')
   #  -s SOURCE, --source SOURCE
   #                        Source root data file name (default: 'idmapping_selected.tab')
   #  -t TARGET, --target TARGET

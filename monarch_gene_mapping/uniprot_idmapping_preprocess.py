@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 """
-Utility methods for pre-filtering of huge input files of
-mapping data (i.e. data/uniprot/idmapping_selected.tab.gz)
+Utility methods for pre-filtering of **huge** UniProdKB ID
+mapping input file (i.e. data/uniprot/idmapping_selected.tab.gz)
+The script takes about 9 minutes to filter the input dataset containing
+~60 million original entries, down to ~1.2 million (of taxon-specific) entries.
 """
 from os import sep
 from os.path import join, abspath, dirname
@@ -49,6 +51,9 @@ def target_taxon(line: Optional[str]) -> bool:
         return False
 
 
+PROGRESS_MONITOR_INCR: int = 1000
+
+
 def filter_uniprot_id_mapping_file(
         directory: str,
         source_filename: str,
@@ -83,15 +88,21 @@ def filter_uniprot_id_mapping_file(
     target_gz_filename: str = f"{target_filename}.gz"
     target_gz_file_path: str = f"{directory_path}{sep}{target_gz_filename}"
     n: int = 0
+    p: int = 0  # visible progress monitor
+    print("Processing... ")
     try:
         with gzip_open(source_gz_file_path, mode='rt', encoding='utf-8') as source_gz_file:
             with gzip_open(target_gz_file_path, mode='wt', encoding='utf-8') as target_file:
                 for line in source_gz_file:
+                    p += 1
                     if target_taxon(line):
                         print(line, file=target_file, end="")
                         n += 1
                     if number_of_lines and n > number_of_lines:
                         break
+                    if not (p % PROGRESS_MONITOR_INCR):
+                        print(f"{p} lines", end="\r")
+
     except FileNotFoundError as fnf:
         print(
             f"\nFile '{source_gz_file_path}' not found, at {datetime.now().isoformat()}", file=stderr)

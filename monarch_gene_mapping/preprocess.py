@@ -1,117 +1,154 @@
+#!/usr/bin/env python
 """
 Utility methods for pre-filtering of huge input files of
 mapping data (i.e. data/uniprot/idmapping_selected.tab.gz)
 """
-from sys import stderr
-from os import sep, remove
-from tarfile import (
-    open as tar_open,
-    ReadError,
-    CompressionError,
-    TarInfo
+from os import sep
+from os.path import join, abspath, dirname
 
-)
+from sys import stderr
+import argparse
+
+from gzip import open as gzip_open, BadGzipFile
+
 from datetime import datetime
 
-from io import TextIOWrapper
-import logging
-from typing import Optional, List
+from typing import Optional, List, Set
 
-logger = logging.getLogger()
-
-
-_ncbitaxon_catalog = {
-    # TODO: may need to further build up this catalog
-    #       of species - just starting with the STRING DB list + Dictyostelium
-    "HUMAN": "9606",
-    "MOUSE": "10090",
-    "CANLF": "9615",    # Canis lupus familiaris - domestic dog
-    # "FELCA": "9685",  # Felis catus - domestic cat
-    "BOVIN": "9913",    # Bos taurus - cow
-    "PIG": "9823",      # Sus scrofa - pig
-    "RAT": "10116",
-    "CHICK": "9031",
-    "XENTR": "8364",   # Xenopus tropicalis - tropical clawed frog
-    "DANRE": "7955",
-    "DROME": "7227",
-    "CAEEL": "6239",
-    "DICDI": "44689",
-    "EMENI": "227321",  # Emericella nidulans (strain FGSC A4 etc.) (Aspergillus nidulans)
-    "SCHPO": "4896",
-    "YEAST": "4932",
+_ncbitaxon_catalog: Set = {
+    "9606",    # Homo sapiens
+    "10090",   # Mus musculus (mouse)
+    "9615",    # Canis lupus familiaris - domestic dog
+    # "9685", # Felis catus - domestic cat
+    "9913",    # Bos taurus - cow
+    "9823",    # Sus scrofa - pig
+    "10116",   # Rattus norvegicus (Norway rat)
+    "9031",    # Gallus gallus
+    "8364",    # Xenopus tropicalis - tropical clawed frog
+    "7955",    # Danio rerio (Zebrafish)
+    "7227",    # Drosophila melanogaster (fruit fly)
+    "6239",    # Caenorhabditus elegans
+    "44689",   # Dictylostelium
+    "227321",  # Emericella nidulans (strain FGSC A4 etc.) (Aspergillus nidulans)
+    "4896",    # Schizosaccharomyces pombe ("fission" yeast)
+    "4932"     # Saccharomyces cerevisiae (baker's "budding" yeast)
 }
+
+# idmapping_selected.tab field 13 is column 12 in TSV array...
+UNIPROT_ID_MAPPING_NCBI_TAXON_COLUMN = 12
 
 
 def target_taxon(line: Optional[str]) -> bool:
     if not line:
         return False
-    part: List[str] = line.split("|")
-    if part[0] in _ncbitaxon_catalog.keys():
+    part: List[str] = line.split("\t")
+    if part[UNIPROT_ID_MAPPING_NCBI_TAXON_COLUMN] in _ncbitaxon_catalog:
         return True
     else:
         return False
 
 
 def filter_uniprot_id_mapping_file(
-        directory: str = '.',
-        source_filename: str = "data/uniprot/idmapping_selected.tab.gz",
-        target_filename: str = "data/uniprot/idmapping_filtered.tab.gz",
+        directory: str,
+        source_filename: str,
+        target_filename: str,  # root file name only?
         number_of_lines: int = 0
 ) -> bool:
     """
-    Filters contents of a Panther orthologs tar.gz archive against the target list of taxa.
+    Filters contents of a UniProKB idmapping selected tab gzip'd archive against the target list of taxa.
     :param directory: str, location of source data file
-    :param source_filename: str, source data file name
-    :param target_filename: str, target data file name
-    :param number_of_lines: int, number of lines parsed; 'all' lines parsed if omitted or set to zero
+    :param source_filename: str, root file name of input source data archive
+    :param target_filename: str, root file name of output target data archive
+    :param number_of_lines: int, positive number of lines parsed; 'all' lines parsed if omitted or set to zero
     :return: bool, True if filtering was successful; False if unsuccessful
     """
+    if not directory:
+        directory = "."
+    directory_path: str = join(abspath(dirname(__file__)), directory)
+
     assert source_filename
     assert target_filename
     assert number_of_lines >= 0
+
     print(
         f"\nBegin file filtering '{number_of_lines if number_of_lines else 'all'}'" +
         f" lines in '{source_filename}' at {datetime.now().isoformat()}. " +
-        f"\nPatience! This may take a little awhile!...", file=stderr
+        f"\nPatience! This may take a little awhile!...\n"
     )
-    # A standard TAR file with a single entry identical in name to filename
-    source_tar_filename: str = f"{source_filename}.tar.gz"
-    source_tar_file_path: str = f"{directory}{sep}{source_tar_filename}"
-    target_file_path: str = f"{directory}{sep}{target_filename}"
+
+    # A standard gzip compressed TSV file
+    source_gz_filename: str = f"{source_filename}.gz"
+    source_gz_file_path: str = f"{directory_path}{sep}{source_gz_filename}"
+    target_gz_filename: str = f"{target_filename}.gz"
+    target_gz_file_path: str = f"{directory_path}{sep}{target_gz_filename}"
     n: int = 0
     try:
-        with tar_open(source_tar_file_path, mode='r') as source_tar_file:
-            with open(target_file_path, mode='w', encoding='utf-8') as target_file:
-                # first member assumed to be the one and only target member
-                member = source_tar_file.next()
-                if not member:
-                    logger.error(f"filter_file() tar archive '{source_tar_filename}' is empty?")
-                    print(
-                        f"Failed preprocessing '{source_filename}' at {datetime.now().isoformat()}", file=stderr
-                    )
-                    return False
-                with source_tar_file.extractfile(member) as orthologs_reader:  # io.BufferedReader
-                    orthologs_file = TextIOWrapper(orthologs_reader)
-                    for line in orthologs_file:
-                        if target_taxon(line):
-                            print(line, file=target_file, end="")
-                            n += 1
-                        if number_of_lines and n > number_of_lines:
-                            break
-    except (ReadError, CompressionError) as e:
-        logger.error(f"filter_file() tar file access exception: {str(e)}")
-        print(f"Failed preprocessing '{source_filename}' at {datetime.now().isoformat()}", file=stderr)
+        with gzip_open(source_gz_file_path, mode='rt', encoding='utf-8') as source_gz_file:
+            with gzip_open(target_gz_file_path, mode='wt', encoding='utf-8') as target_file:
+                for line in source_gz_file:
+                    if target_taxon(line):
+                        print(line, file=target_file, end="")
+                        n += 1
+                    if number_of_lines and n > number_of_lines:
+                        break
+    except FileNotFoundError as fnf:
+        print(
+            f"\nFile '{source_gz_file_path}' not found, at {datetime.now().isoformat()}", file=stderr)
+        return False
+    except BadGzipFile as bzf:
+        print(
+            f"\nFailed filtering '{source_filename}' at {datetime.now().isoformat()}: " +
+            f"Gzip file access exception: {str(bzf)}", file=stderr)
         return False
 
-    target_tar_filename: str = f"{target_filename}.tar.gz"
-    target_tar_file_path: str = f"{directory}{sep}{target_tar_filename}"
-    with tar_open(target_tar_file_path, mode='w:gz') as target_tar_file:
-        target_tarinfo: TarInfo = target_tar_file.gettarinfo(name=target_file_path, arcname=target_filename)
-        with open(target_file_path, mode='rb') as target_file:
-            target_tar_file.addfile(target_tarinfo, fileobj=target_file)
-
-    # delete the naked file
-    remove(target_file_path)
-
-    print(f"Finished filtering file '{source_filename}' at {datetime.now().isoformat()}", file=stderr)
+    print(f"\nFinished filtering file '{source_gz_file_path}' at {datetime.now().isoformat()}")
     return True
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-d",
+        "--directory",
+        default=f"..{sep}data{sep}uniprot",
+        help="Working directory containing the data (default: 'data/uniprot')"
+    )
+    parser.add_argument(
+        "-s",
+        "--source",
+        default="idmapping_selected.tab",
+        help="Source root data file name (default: 'idmapping_selected.tab')"
+    )
+    parser.add_argument(
+        "-t",
+        "--target",
+        default="idmapping.tsv",
+        help="Target root data file name (default: 'idmapping.tsv')"
+    )
+    parser.add_argument(
+        "-n",
+        "--number_of_lines",
+        type=int,
+        default=0,
+        help="Maximum (positive) number of lines to process; n == 0 implies 'process all' (default: 0 == 'all')"
+    )
+
+    args = parser.parse_args()
+
+    if filter_uniprot_id_mapping_file(
+            directory=args.directory,
+            source_filename=args.source,
+            target_filename=args.target,
+            number_of_lines=args.number_of_lines
+    ):
+        quantity: str = args.number_of_lines > 0 if args.number_of_lines else "All"
+        print(
+            f"\n{quantity} lines of file '{args.source}' in directory '{args.directory}'" +
+            f" successfully filtered into file '{args.target}'"
+        )
+    else:
+        # fail filtering
+        print(
+            f"\nERROR: file '{str(args.source)}' in directory '{args.directory}' could NOT be processed?"
+        )

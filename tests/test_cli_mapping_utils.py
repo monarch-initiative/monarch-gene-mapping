@@ -4,7 +4,7 @@ A few unit tests for pieces of the mapping framework
 from typing import Tuple
 import pytest
 
-from monarch_gene_mapping.preprocess import target_taxon
+from monarch_gene_mapping.uniprot_idmapping_preprocess import target_taxon
 
 
 @pytest.mark.parametrize(

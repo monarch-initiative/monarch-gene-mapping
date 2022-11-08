@@ -206,8 +206,12 @@ def generate_gene_mappings() -> DataFrame:
     assert (len(ncbi_to_ensembl) > 70000)
     mapping_dataframes.append(ncbi_to_ensembl)
 
+    # The original UniProt 'idmapping_selected.tab.gz' file (as of November 2022) is a *huge* 11 GB gzip archive file!
+    # This file should be prefiltered down to target species using the 'uniprot_idmapping_preprocess.py' script
+    # The set of target species is currently hard-coded at the top of this filter script. To distinguish it from
+    # the original data, we assume that the filtered file is renamed to 'data/uniprot/idmapping.tsv.gz'.
     uniprot_df = pd.read_csv(
-        "data/uniprot/idmapping_selected.tab.gz",
+        "data/uniprot/idmapping.tsv.gz",
         names=UNIPROT_ID_MAPPING_SELECTED_COLUMNS, compression="gzip", sep="\t"
     )
     uniprot_to_ncbi = df_mappings(

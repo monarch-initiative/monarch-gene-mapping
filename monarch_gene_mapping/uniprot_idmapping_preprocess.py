@@ -15,7 +15,8 @@ from datetime import datetime
 
 from typing import Optional, List, Set
 
-_ncbitaxon_catalog: Set = {
+# Hard-coded list of target species (TODO: externalize this list in a configuration file?)
+target_species: Set = {
     "9606",    # Homo sapiens
     "10090",   # Mus musculus (mouse)
     "9615",    # Canis lupus familiaris - domestic dog
@@ -42,7 +43,7 @@ def target_taxon(line: Optional[str]) -> bool:
     if not line:
         return False
     part: List[str] = line.split("\t")
-    if part[UNIPROT_ID_MAPPING_NCBI_TAXON_COLUMN] in _ncbitaxon_catalog:
+    if part[UNIPROT_ID_MAPPING_NCBI_TAXON_COLUMN] in target_species:
         return True
     else:
         return False

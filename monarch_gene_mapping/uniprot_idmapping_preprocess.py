@@ -70,7 +70,7 @@ def filter_uniprot_id_mapping_file(
     """
     if not directory:
         directory = "."
-    directory_path: str = join(abspath(dirname(__file__)), directory)
+    directory_path: str = directory
 
     assert source_filename
     assert target_filename

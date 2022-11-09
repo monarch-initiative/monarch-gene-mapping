@@ -13,7 +13,7 @@ pipeline {
         }
         stage('generate-mapping-file') {
             steps {
-                sh 'poetry run gene-mapping generate --download'
+                sh 'poetry run gene-mapping generate --download --preprocess-uniprot'
             }
         }
         stage('upload-mapping-file'){

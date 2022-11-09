@@ -3,7 +3,7 @@ import typer
 import pathlib
 from kghub_downloader.download_utils import download_from_yaml
 from monarch_gene_mapping.cli_utils import *
-from .uniprot_idmapping_preprocess import filter_uniprot_id_mapping_file
+from monarch_gene_mapping.uniprot_idmapping_preprocess import filter_uniprot_id_mapping_file
 
 typer_app = typer.Typer()
 
@@ -16,7 +16,7 @@ def _download():
     )
 
 
-@typer_app.command(name="filter-uniprot")
+@typer_app.command(name="preprocess-uniprot")
 def preprocess_uniprot_mappings(
         directory: str = typer.Option(f"..{sep}data{sep}uniprot", help="Data Directory"),
         source_filename: str = typer.Option("idmapping_selected.tab", help="Target File Name"),
@@ -35,14 +35,14 @@ def preprocess_uniprot_mappings(
 def generate(
         output_dir=typer.Option("output", help="Output directory"),
         download: bool = typer.Option(False, help="Pass to first download required data"),
-        filter_uniprot: bool = typer.Option(True, help="Filter out UniProt ID mapping data after download")
+        preprocess_uniprot: bool = typer.Option(False, help="Filter out UniProt ID mapping data after download")
 ):
     if download:
         _download()
         print("\nData download complete!\n")
 
     # prefilter 'target' taxa in Uniprot data
-    if filter_uniprot:
+    if preprocess_uniprot:
         filter_uniprot_id_mapping_file(
             directory="data/uniprot",
             source_filename="idmapping_selected.tab",

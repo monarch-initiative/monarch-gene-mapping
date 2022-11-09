@@ -1,8 +1,32 @@
-import gzip, json
 import pandas as pd
 from pandas.core.frame import DataFrame
-from typing import Dict, List
+from typing import List
 
+# The UniProtKB mapping tsv file lacks a header line
+UNIPROT_ID_MAPPING_SELECTED_COLUMNS = [
+    "UniProtKB-AC",
+    "UniProtKB-ID",
+    "GeneID",
+    "RefSeq",
+    "GI",
+    "PDB",
+    "GO",
+    "UniRef100",
+    "UniRef90",
+    "UniRef50",
+    "UniParc",
+    "PIR",
+    "NCBI-taxon",
+    "MIM",
+    "UniGene",
+    "PubMed",
+    "EMBL",
+    "EMBL-CDS",
+    "Ensembl",
+    "Ensembl_TRS",
+    "Ensembl_PRO",
+    "Additional PubMed"
+]
 
 
 def add_prefix(prefix: str, column: pd.Series) -> pd.Series:
@@ -75,6 +99,7 @@ def id_list_to_sssom(df: DataFrame, column: str, delimiter: str) -> DataFrame:
     df_sssom = df.assign(**assign_kwargs).explode(column).copy()
     return df_sssom
 
+
 def preprocess_alliance_df(df: DataFrame,
                            exclude_taxon: List,
                            include_curie: List,
@@ -86,6 +111,7 @@ def preprocess_alliance_df(df: DataFrame,
 
     df_filtered = df.loc[taxon_filter & curie_filter & self_filter & xref_curie_filter, :]
     return df_filtered.copy()
+
 
 def alliance_mapping() -> DataFrame:
 
@@ -110,7 +136,6 @@ def alliance_mapping() -> DataFrame:
     return alliance_mappings
 
 
-
 def generate_gene_mappings() -> DataFrame:
 
     mapping_dataframes = []
@@ -118,6 +143,8 @@ def generate_gene_mappings() -> DataFrame:
     alliance_mappings = alliance_mapping()
     assert(len(alliance_mappings) > 400000)
     mapping_dataframes.append(alliance_mappings)
+
+    print("Generating HGNC to NCBI Gene mappings...")
 
     hgnc_df = pd.read_csv("data/hgnc/hgnc_complete_set.txt", sep="\t", dtype="string")
     ncbi_to_hgnc = df_mappings(
@@ -131,6 +158,8 @@ def generate_gene_mappings() -> DataFrame:
     assert(len(ncbi_to_hgnc) > 40000)
     mapping_dataframes.append(ncbi_to_hgnc)
 
+    print("Generating HGNC to OMIM mappings...")
+
     omim_to_hgnc = df_mappings(
         df=id_list_to_sssom(hgnc_df, "omim_id", "|"),
         subject_column="hgnc_id",
@@ -141,6 +170,8 @@ def generate_gene_mappings() -> DataFrame:
     )
     assert(len(omim_to_hgnc) > 16000)
     mapping_dataframes.append(omim_to_hgnc)
+
+    print("Generating HGNC to UniProtKB mappings...")
 
     uniprot_to_hgnc = df_mappings(
         df=id_list_to_sssom(hgnc_df, "uniprot_ids", "|"),
@@ -153,6 +184,8 @@ def generate_gene_mappings() -> DataFrame:
     assert(len(uniprot_to_hgnc) > 20000)
     mapping_dataframes.append(uniprot_to_hgnc)
 
+    print("Generating HGNC to ENSEMBL Gene mappings...")
+
     ensembl_to_hgnc = df_mappings(
         df=hgnc_df,
         subject_column="hgnc_id",
@@ -164,6 +197,8 @@ def generate_gene_mappings() -> DataFrame:
     assert(len(ensembl_to_hgnc) > 40000)
     mapping_dataframes.append(ensembl_to_hgnc)
 
+    print("Generating NCBIGene to ENSEMBL Gene mappings...")
+
     ensembl_df = pd.read_csv("data/ncbi/gene2ensembl.gz", compression="gzip", sep="\t")
     ncbi_to_ensembl = df_mappings(
         df=ensembl_df,
@@ -174,11 +209,40 @@ def generate_gene_mappings() -> DataFrame:
         predicate_id="skos:exactMatch",
         mapping_justification="semapv:UnspecifiedMatching",
         filter_column="#tax_id",
-        filter_ids=[9031, 9615, 9913, 9823]  # Chicken: 9031, Dog: 9615, Cow, 9913, Pig: 9823
+
+        # Chicken: 9031, Dog: 9615, Cow, 9913, Pig: 9823, Aspergillus ('Emericella') nidulans: 227321
+        filter_ids=[9031, 9615, 9913, 9823, 227321]
     )
     assert (len(ncbi_to_ensembl) > 70000)
     mapping_dataframes.append(ncbi_to_ensembl)
 
+    # The original UniProt 'idmapping_selected.tab.gz' file (as of November 2022) is a *huge* 11 GB gzip archive file!
+    # This file should be prefiltered down to target species using the 'uniprot_idmapping_preprocess.py' script
+    # The set of target species is currently hard-coded at the top of this filter script. To distinguish it from
+    # the original data, we assume that the filtered file is renamed to 'data/uniprot/idmapping.tsv.gz'.
+
+    print("Generating UniProtKB to NCBI Gene mappings...")
+
+    uniprot_df = pd.read_csv(
+        "data/uniprot/idmapping.tsv.gz",
+        names=UNIPROT_ID_MAPPING_SELECTED_COLUMNS,
+        compression="gzip", sep="\t", low_memory=False
+    )
+    uniprot_to_ncbi = df_mappings(
+        df=uniprot_df,
+        subject_column="UniProtKB-AC",
+        subject_curie_prefix="UniProtKB:",
+        object_column="GeneID",
+        object_curie_prefix="NCBIGene:",
+        predicate_id="skos:exactMatch",
+        mapping_justification="semapv:UnspecifiedMatching",
+        filter_column="NCBI-taxon",
+
+        # Chicken: 9031, Dog: 9615, Cow, 9913, Pig: 9823, Aspergillus ('Emericella') nidulans: 227321
+        filter_ids=[9031, 9615, 9913, 9823, 227321]
+    )
+    assert (len(uniprot_to_ncbi) > 70000)
+    mapping_dataframes.append(uniprot_to_ncbi)
 
     mappings = pd.concat(mapping_dataframes)
 

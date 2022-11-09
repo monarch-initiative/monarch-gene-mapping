@@ -21,7 +21,7 @@ pipeline {
                 sh '''
                     gsutil cp output/gene_mappings.tsv gs://monarch-archive/monarch-gene-mapping/${RELEASE}/
                     gsutil cp output/gene_mappings.tsv gs://data-public-monarchinitiative/monarch-gene-mapping/${RELEASE}/
-                    gsutil cp otuput/gene_mappings.tsv gs://monarch-ingest-data-cache/monarch/
+                    gsutil cp output/gene_mappings.tsv gs://monarch-ingest-data-cache/monarch/
                     
                     gsutil rm gs://data-public-monarchinitiative/monarch-gene-mapping/latest/*
                     gsutil cp gs://data-public-monarchinitiative/monarch-gene-mapping/${RELEASE}/gene_mappings.tsv gs://data-public-monarchinitiative/monarch-gene-mapping/latest/gene_mappings.tsv

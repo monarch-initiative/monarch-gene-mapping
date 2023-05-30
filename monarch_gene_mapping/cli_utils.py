@@ -108,7 +108,7 @@ def preprocess_alliance_df(df: DataFrame,
     curie_filter = df["GeneID"].str.contains('|'.join(include_curie))
     self_filter = df["GeneID"] != df["GlobalCrossReferenceID"]
     xref_curie_filter = df["GlobalCrossReferenceID"].str.startswith(tuple(include_xref_curie))
-
+    df.loc[:, "GlobalCrossReferenceID"] = df["GlobalCrossReferenceID"].str.replace("NCBI_Gene:", "NCBIGene:")
     df_filtered = df.loc[taxon_filter & curie_filter & self_filter & xref_curie_filter, :]
     return df_filtered.copy()
 

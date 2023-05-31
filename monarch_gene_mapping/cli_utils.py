@@ -230,11 +230,11 @@ def generate_gene_mappings() -> DataFrame:
     )
     uniprot_to_ncbi = df_mappings(
         df=uniprot_df,
-        subject_column="UniProtKB-AC",
-        subject_curie_prefix="UniProtKB:",
-        object_column="GeneID",
-        object_curie_prefix="NCBIGene:",
+        subject_column="GeneID",
+        subject_curie_prefix="NCBIGene:",
         predicate_id="skos:exactMatch",
+        object_column="UniProtKB-AC",
+        object_curie_prefix="UniProtKB:",
         mapping_justification="semapv:UnspecifiedMatching",
         filter_column="NCBI-taxon",
 

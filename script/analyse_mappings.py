@@ -11,7 +11,7 @@ def get_parameters() -> Namespace:
     print("Entering 'get_parameters()'")
     parser = ArgumentParser(
         prog='analyse mappings',
-        description='Analyses dangling edges from a Monarch ingest',
+        description='Analyse gene_mappings missing from a Monarch ingest',
         epilog='Copyright 2023 - the Monarch Initiative'
     )
     parser.add_argument('filename')

@@ -22,7 +22,6 @@ def get_parameters() -> Namespace:
         help="Monarch angling edges GZ archive file (Default: 'monarch-kg-dangling-edges.tsv.gz')"
     )
     parser.add_argument('-s', '--knowledge_source')
-    parser.add_argument('-v', '--verbose', action='store_true')  # on/off flag
 
     args = parser.parse_args()
     return args
@@ -31,13 +30,12 @@ def get_parameters() -> Namespace:
 report_fields: Optional[List[str]] = ["subject", "object", "has_evidence"]
 
 
-def read_entry(entry: Dict, knowledge_source: str, verbose: bool) -> Optional[Dict]:
+def read_entry(entry: Dict, knowledge_source: str) -> Optional[Dict]:
     """
     Prepare a dangling edge line record.
 
     :param entry: Dict, a single dangling edge record.
     :param knowledge_source: str, knowledge source filter for records
-    :param verbose: bool, mode for logging progress of input or any parse errors
     :return: Optional[Tuple[str, Dict]], a tuple that contains node id and node data
     """
     if entry:
@@ -59,28 +57,26 @@ def read_entry(entry: Dict, knowledge_source: str, verbose: bool) -> Optional[Di
     return None
 
 
-def read_entries(df: pd.DataFrame, knowledge_source: str, verbose: bool) -> Generator:
+def read_entries(df: pd.DataFrame, knowledge_source: str) -> Generator:
     """
     Read records from pandas.DataFrame and yield records.
     :param df: pandas.DataFrame, Dataframe containing records that represent dangling edge entries.
     :param knowledge_source: str, knowledge source filter for records
-    :param verbose: bool, mode for logging progress of input or any parse errors
     :return: A generator for dangling edge entries
     """
     for obj in df.to_dict("records"):
-        entry: Optional[Dict] = read_entry(obj, knowledge_source, verbose)
+        entry: Optional[Dict] = read_entry(obj, knowledge_source)
         if entry is None:
             continue
         yield entry
 
 
-def parse(filename: str, knowledge_source: str, verbose: bool = False) -> Generator:
+def parse(filename: str, knowledge_source: str) -> Generator:
     """
     This method reads from a TSV/CSV and yields records.
 
     :param filename: The GZ filename to parse
     :param knowledge_source: str, knowledge source filter for records
-    :param verbose: bool, mode for logging progress of input or any parse errors, default: False
     :return: A generator for dangling edge records
     """
     global report_fields
@@ -95,36 +91,39 @@ def parse(filename: str, knowledge_source: str, verbose: bool = False) -> Genera
         # TODO: how can I capture the column identities in an ordered fashion?
         if report_fields is None:
             report_fields = list(chunk.columns)
-        yield from read_entries(chunk, knowledge_source, verbose)
+        yield from read_entries(chunk, knowledge_source)
 
 
-def dump_entry(entry: Optional[Dict]):
+def dump_entry(entry: Optional[Dict], output):
+    """
+    Dump selected fields of the dangling edge.
+
+    :param entry: entry to be reported
+    :param output: text file device open for output
+    :return:
+    """
     global report_fields
-    # print(f"Entry:")
-    # for f in report_fields:
-    #     print(f"\t{f:>30}: {entry[f]}")
-    # print()
-    print('\t'.join([entry[f] for f in report_fields]))
+    print('\t'.join([entry[f] for f in report_fields]), file=output)
 
 
-def analyse_file(filename: str, knowledge_source: str, verbose: bool):
+def analyse_file(filename: str, knowledge_source: str, output):
     """
     Opens and reads a "dangling edges" TSV file.
 
-    :param filename: 
-    :param knowledge_source: 
-    :param verbose: 
+    :param filename: (gzip'd) input file name
+    :param knowledge_source: primary knowledge source whose records are being extracted
+    :param output: text file device open for output
     :return: 
     """
     global report_fields
-    print(f"Entering analyse_file({filename} filtering on {knowledge_source}), verbose {verbose}?")
+    print(f"Entering analyse_file({filename} filtering on {knowledge_source})")
     
     n: int = 0
 
     entry: Dict
-    print('\t'.join(report_fields))
-    for entry in parse(filename, knowledge_source, verbose):
-        dump_entry(entry)
+    print('\t'.join(report_fields), file=output)
+    for entry in parse(filename, knowledge_source):
+        dump_entry(entry, output)
         n += 1
         if MAX_ENTRIES and n > MAX_ENTRIES:
             break
@@ -138,11 +137,11 @@ def main():
     args = get_parameters()
     print(
         f"File Name:\t'{args.filename}'\n",
-        f"Primary KS:\t{args.knowledge_source}",
-        f"Verbose?\t'{args.verbose}'"
+        f"Primary KS:\t{args.knowledge_source}"
     )
 
-    analyse_file(args.filename, args.knowledge_source, args.verbose)
+    with open(f"{args.knowledge_source}_dangling_edges.tsv", mode="w") as output:
+        analyse_file(args.filename, args.knowledge_source, output)
 
 
 if __name__ == "__main__":

@@ -1,78 +1,149 @@
 #!/bin/env python
-import sys
 from argparse import Namespace, ArgumentParser
-from typing import List
+from typing import List, Generator, Optional,  Dict, Tuple
+import pandas as pd
 
+import logging
+logger = logging.getLogger(__name__)
 
-MAX_LINES = 0
+MAX_ENTRIES = 10
 
 
 def get_parameters() -> Namespace:
     print("Entering 'get_parameters()'")
     parser = ArgumentParser(
-        prog='analyse mappings',
+        prog='Analyse Monarch Dangling Edges',
         description='Analyse gene_mappings missing from a Monarch ingest',
         epilog='Copyright 2023 - the Monarch Initiative'
     )
-    parser.add_argument('filename')
-    parser.add_argument('-s', '--primary_knowledge_source')
+    parser.add_argument(
+        "filename",
+        default="monarch-kg-dangling-edges.tsv.gz",
+        help="Monarch angling edges GZ archive file (Default: 'monarch-kg-dangling-edges.tsv.gz')"
+    )
+    parser.add_argument('-s', '--knowledge_source')
     parser.add_argument('-v', '--verbose', action='store_true')  # on/off flag
 
     args = parser.parse_args()
     return args
 
 
-def valid_entry(data: List[str]) -> bool:
-    # simple check for empty or null data fields
-    # if all([bool(item) for item in data]):
-    # print(data[1], data[3])
-    if data[1] and data[3]:
-        return True
-    else:
-        return False
+report_fields: Optional[List[str]] = ["subject", "object", "has_evidence"]
 
 
-def dump_entry(fields: List[str], line: str):
-    # print(line)
-    data: List[str] = line.split("\t")
-    if not valid_entry(data):
-        for f in range(0, len(data)):
-            value: str = data[f]  # .replace(':', '\\:')
-            print(f"{fields[f]:>30}: {value}")
-        print()
-        return True
-    return False
+def read_entry(entry: Dict, knowledge_source: str, verbose: bool) -> Optional[Dict]:
+    """
+    Prepare a dangling edge line record.
+
+    :param entry: Dict, a single dangling edge record.
+    :param knowledge_source: str, knowledge source filter for records
+    :param verbose: bool, mode for logging progress of input or any parse errors
+    :return: Optional[Tuple[str, Dict]], a tuple that contains node id and node data
+    """
+    if entry:
+        # if not obj.find(knowledge_source):
+        #     continue
+        # node = self.validate_node(node)
+        # if node:
+        #     # if not None, assumed to have an "id" here...
+        #     node_data = sanitize_import(node.copy(), self.list_delimiter)
+        #     n = node_data["id"]
+        #
+        #     self.set_node_provenance(node_data)  # this method adds provided_by to the node properties/node data
+        #     self.node_properties.update(list(node_data.keys()))
+        #     if self.check_node_filter(node_data):
+        #         self.node_properties.update(node_data.keys())
+        #         return n, node_data
+        if entry['primary_knowledge_source'] and entry['primary_knowledge_source'].find(knowledge_source):
+            return entry
+    return None
 
 
-def analyse_file(filename: str, primary_knowledge_source: str):
-    print(f"Entering 'analyse_file({filename} filtering on {primary_knowledge_source})'")
-    n: int = 0
-    d: int = 0
-    # with open(sys.stdin) as input_file:
-    headings: str = sys.stdin.readline()
-    fields: List[str] = [tag.strip() for tag in headings.split("\t")]
-    for line in sys.stdin:
-        if not line.find(primary_knowledge_source):
+def read_entries(df: pd.DataFrame, knowledge_source: str, verbose: bool) -> Generator:
+    """
+    Read records from pandas.DataFrame and yield records.
+    :param df: pandas.DataFrame, Dataframe containing records that represent dangling edge entries.
+    :param knowledge_source: str, knowledge source filter for records
+    :param verbose: bool, mode for logging progress of input or any parse errors
+    :return: A generator for dangling edge entries
+    """
+    for obj in df.to_dict("records"):
+        entry: Optional[Dict] = read_entry(obj, knowledge_source, verbose)
+        if entry is None:
             continue
+        yield entry
+
+
+def parse(filename: str, knowledge_source: str, verbose: bool = False) -> Generator:
+    """
+    This method reads from a TSV/CSV and yields records.
+
+    :param filename: The GZ filename to parse
+    :param knowledge_source: str, knowledge source filter for records
+    :param verbose: bool, mode for logging progress of input or any parse errors, default: False
+    :return: A generator for dangling edge records
+    """
+    global report_fields
+    file_iter = pd.read_table(
+        filename,
+        dtype=str,
+        chunksize=10000,
+        keep_default_na=False,
+        compression='gzip'
+    )
+    for chunk in file_iter:
+        # TODO: how can I capture the column identities in an ordered fashion?
+        if report_fields is None:
+            report_fields = list(chunk.columns)
+        yield from read_entries(chunk, knowledge_source, verbose)
+
+
+def dump_entry(entry: Optional[Dict]):
+    global report_fields
+    # print(f"Entry:")
+    # for f in report_fields:
+    #     print(f"\t{f:>30}: {entry[f]}")
+    # print()
+    print('\t'.join([entry[f] for f in report_fields]))
+
+
+def analyse_file(filename: str, knowledge_source: str, verbose: bool):
+    """
+    Opens and reads a "dangling edges" TSV file.
+
+    :param filename: 
+    :param knowledge_source: 
+    :param verbose: 
+    :return: 
+    """
+    global report_fields
+    print(f"Entering analyse_file({filename} filtering on {knowledge_source}), verbose {verbose}?")
+    
+    n: int = 0
+
+    entry: Dict
+    print('\t'.join(report_fields))
+    for entry in parse(filename, knowledge_source, verbose):
+        dump_entry(entry)
         n += 1
-        if dump_entry(fields, line):
-            d += 1
-        if MAX_LINES and n > MAX_LINES:
+        if MAX_ENTRIES and n > MAX_ENTRIES:
             break
-    print(f"Found '{d}' invalid entries in '{n}' lines assessed from '{filename}'")
+
+    print(f"Found '{n}' lines assessed from '{filename}'")
 
 
 def main():
+
     print("Entering 'main()'")
     args = get_parameters()
     print(
         f"File Name:\t'{args.filename}'\n",
-        f"Primary KS:\t{args.primary_knowledge_source}",
+        f"Primary KS:\t{args.knowledge_source}",
         f"Verbose?\t'{args.verbose}'"
     )
-    analyse_file(args.filename, args.primary_knowledge_source)
+
+    analyse_file(args.filename, args.knowledge_source, args.verbose)
 
 
 if __name__ == "__main__":
     main()
-

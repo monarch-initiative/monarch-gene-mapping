@@ -119,10 +119,11 @@ def analyse_file(filename: str, knowledge_source: str, output):
     print(f"Entering analyse_file({filename} filtering on {knowledge_source})")
     
     n: int = 0
-
     entry: Dict
     print('\t'.join(report_fields), file=output)
     for entry in parse(filename, knowledge_source):
+        # TODO: maybe I don't want to simply dump the entries, but given the duplication
+        #       of identifiers, rather compile the a separate list for deferred dumping
         dump_entry(entry, output)
         n += 1
         if MAX_ENTRIES and n > MAX_ENTRIES:

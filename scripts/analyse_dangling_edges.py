@@ -111,7 +111,7 @@ def analyse_file(filename: str, knowledge_source: str, gene_filter: str) -> Set[
         process_entry(entry, gene_filter, result_set)
         n += 1
         if not (n % PINC):
-            print('.', end="" if n % (PINC*40) else "\n")
+            print('.', end="" if n % (PINC*40) else "\n", flush=True)
         if MAX_ENTRIES and n >= MAX_ENTRIES:
             break
 

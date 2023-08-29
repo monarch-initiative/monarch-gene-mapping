@@ -88,10 +88,10 @@ def process_entry(entry: Dict, gene_filter: str, result_set: Set[str]):
     :return: None
     """
     subject_id: str = entry['subject']
-    if subject_id and subject_id.find(gene_filter) >= 0:
+    if subject_id and (not gene_filter or subject_id.find(gene_filter) >= 0):
         result_set.add(subject_id)
     object_id: str = entry['object']
-    if object_id and object_id.find(gene_filter) >= 0:
+    if object_id and (not gene_filter or object_id.find(gene_filter) >= 0):
         result_set.add(object_id)
 
 

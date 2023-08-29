@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 from argparse import Namespace, ArgumentParser
 from typing import Generator, Dict, Set
 import pandas as pd

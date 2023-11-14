@@ -1,9 +1,10 @@
+"""
+Unit tests for the mapping generation framework
+"""
 import pandas as pd
 import pytest
 
 from monarch_gene_mapping.cli_utils import df_mappings, explode_column, UNIPROT_ID_MAPPING_SELECTED_COLUMNS
-
-# from monarch_gene_mapping.uniprot_idmapping_preprocess import
 
 
 def test_null_mapping():
@@ -16,10 +17,11 @@ def test_null_mapping():
         predicate_id="skos:exactMatch",
         mapping_justification="semapv:UnspecifiedMatching",
     )
+    # assert len(mapped) == 4
     for row in mapped.itertuples():
-        assert not "NA" in row.subject_id
-        assert not "NA" in row.object_id
-
+        assert not ("NA" in row.subject_id)
+        assert not ("NA" in row.object_id)
+test_null_mapping()
 
 def test_semicolon_in_id():
     uniprot_df = pd.read_csv("tests/resources/uniprot_test.tsv", names=UNIPROT_ID_MAPPING_SELECTED_COLUMNS, sep="\t")

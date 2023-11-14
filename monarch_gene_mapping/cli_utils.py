@@ -84,9 +84,7 @@ def df_mappings(
     # df_unmapped = df_select[df_select['subject_id'].isna() | df_select['object_id'].isna()]
 
     # Drop rows with missing values
-    df_select = df_select.drop_duplicates().dropna(
-        subset=["subject_id", "object_id"], how="any"
-    )
+    df_select = df_select.drop_duplicates().dropna(subset=["subject_id", "object_id"], how="any")
 
     # Expand rows with semicolon in subject_id or object_id to multiple rows
     df_select = explode_column(df_select, "subject_id", entity_delimiter)
@@ -98,7 +96,7 @@ def df_mappings(
         df_select["object_id"] = add_prefix(object_curie_prefix, df_select["object_id"])
     df_map = df_select.drop_duplicates().dropna()
 
-    return df_map #, df_unmapped
+    return df_map  # , df_unmapped
 
 
 def explode_column(df: DataFrame, column: str, delimiter: str) -> DataFrame:
@@ -110,11 +108,11 @@ def explode_column(df: DataFrame, column: str, delimiter: str) -> DataFrame:
     :return:
     """
     # cast columns to string
-    df = df.astype({column:"str"})
+    str_df = df.astype({column: "str"}, copy=True)
 
-    assign_kwargs = {column: df[column].str.split(delimiter)}
-    df_exploded = df.assign(**assign_kwargs).explode(column).copy()
-
+    assign_kwargs = {column: str_df[column].str.split(delimiter)}
+    df_exploded = str_df.assign(**assign_kwargs).explode(column).copy()
+    
     # remove whitespace
     df_exploded[column] = df_exploded[column].str.strip()
     return df_exploded
@@ -157,14 +155,18 @@ def alliance_mapping() -> DataFrame:
 def generate_gene_mappings() -> DataFrame:
     mapping_dataframes = []
 
+    ### Alliance mappings
+    print("Generating Alliance mappings...")
     alliance_mappings = alliance_mapping()
+    print(f"Generated {len(alliance_mappings)} Alliance mappings")
     assert len(alliance_mappings) > 400000
     mapping_dataframes.append(alliance_mappings)
 
-    print("Generating HGNC to NCBI Gene mappings...")
+    ### HGNC mappings
 
+    print("\nGenerating HGNC to NCBI Gene mappings...")
     hgnc_df = pd.read_csv("data/hgnc/hgnc_complete_set.txt", sep="\t", dtype="string")
-    ncbi_to_hgnc = df_mappings(
+    hgnc_to_ncbi = df_mappings(
         df=hgnc_df,
         subject_column="hgnc_id",
         object_column="entrez_id",
@@ -172,12 +174,12 @@ def generate_gene_mappings() -> DataFrame:
         predicate_id="skos:exactMatch",
         mapping_justification="semapv:UnspecifiedMatching",
     )
-    assert len(ncbi_to_hgnc) > 40000
-    mapping_dataframes.append(ncbi_to_hgnc)
+    print(f"Generated {len(hgnc_to_ncbi)} HGNC-NCBI Gene mappings")
+    assert len(hgnc_to_ncbi) > 40000
+    mapping_dataframes.append(hgnc_to_ncbi)
 
-    print("Generating HGNC to OMIM mappings...")
-
-    omim_to_hgnc = df_mappings(
+    print("\nGenerating HGNC to OMIM mappings...")
+    hgnc_to_omim = df_mappings(
         df=explode_column(hgnc_df, "omim_id", "|"),
         subject_column="hgnc_id",
         object_column="omim_id",
@@ -185,12 +187,12 @@ def generate_gene_mappings() -> DataFrame:
         predicate_id="skos:exactMatch",
         mapping_justification="semapv:UnspecifiedMatching",
     )
-    assert len(omim_to_hgnc) > 16000
-    mapping_dataframes.append(omim_to_hgnc)
+    print(f"Generated {len(hgnc_to_omim)} HGNC-OMIM mappings")
+    assert len(hgnc_to_omim) > 16000
+    mapping_dataframes.append(hgnc_to_omim)
 
     print("Generating HGNC to UniProtKB mappings...")
-
-    uniprot_to_hgnc = df_mappings(
+    hgnc_to_uniprot = df_mappings(
         df=explode_column(hgnc_df, "uniprot_ids", "|"),
         subject_column="hgnc_id",
         object_column="uniprot_ids",
@@ -198,12 +200,12 @@ def generate_gene_mappings() -> DataFrame:
         predicate_id="skos:closeMatch",
         mapping_justification="semapv:UnspecifiedMatching",
     )
-    assert len(uniprot_to_hgnc) > 20000
-    mapping_dataframes.append(uniprot_to_hgnc)
+    print(f"Generated {len(hgnc_to_uniprot)} HGNC-UniProtKB mappings")
+    assert len(hgnc_to_uniprot) > 20000
+    mapping_dataframes.append(hgnc_to_uniprot)
 
-    print("Generating HGNC to ENSEMBL Gene mappings...")
-
-    ensembl_to_hgnc = df_mappings(
+    print("\nGenerating HGNC to ENSEMBL Gene mappings...")
+    hgnc_to_ensemble = df_mappings(
         df=hgnc_df,
         subject_column="hgnc_id",
         object_column="ensembl_gene_id",
@@ -211,13 +213,15 @@ def generate_gene_mappings() -> DataFrame:
         predicate_id="skos:exactMatch",
         mapping_justification="semapv:UnspecifiedMatching",
     )
-    assert len(ensembl_to_hgnc) > 40000
-    mapping_dataframes.append(ensembl_to_hgnc)
+    print(f"Generated {len(hgnc_to_ensemble)} HGNC-ENSEMBL Gene mappings")
+    assert len(hgnc_to_ensemble) > 40000
+    mapping_dataframes.append(hgnc_to_ensemble)
+
+    ### NCBI mappings
 
     print("Generating NCBIGene to ENSEMBL Gene mappings...")
-
     ensembl_df = pd.read_csv("data/ncbi/gene2ensembl.gz", compression="gzip", sep="\t")
-    ncbi_to_ensembl = df_mappings(
+    ensembl_to_ncbi = df_mappings(
         df=ensembl_df,
         subject_column="GeneID",
         subject_curie_prefix="NCBIGene:",
@@ -229,23 +233,19 @@ def generate_gene_mappings() -> DataFrame:
         # Chicken: 9031, Dog: 9615, Cow, 9913, Pig: 9823, Aspergillus ('Emericella') nidulans: 227321
         filter_ids=[9031, 9615, 9913, 9823, 227321],
     )
-    assert len(ncbi_to_ensembl) > 70000
-    mapping_dataframes.append(ncbi_to_ensembl)
+    print(f"Generated {len(ensembl_to_ncbi)} ENSEMBL-NCBIGene Gene mappings")
+    assert len(ensembl_to_ncbi) > 70000
+    mapping_dataframes.append(ensembl_to_ncbi)
 
-    # The original UniProt 'idmapping_selected.tab.gz' file (as of November 2022) is a *huge* 11 GB gzip archive file!
-    # This file should be prefiltered down to target species using the 'uniprot_idmapping_preprocess.py' script
-    # The set of target species is currently hard-coded at the top of this filter script. To distinguish it from
-    # the original data, we assume that the filtered file is renamed to 'data/uniprot/idmapping.tsv.gz'.
+    ### UniProtKB mappings
 
     print("Generating UniProtKB to NCBI Gene mappings...")
-
     uniprot_df = pd.read_csv(
-        "data/uniprot/idmapping.tsv.gz",
+        "data/uniprot/idmapping_filtered.tsv.gz",  # filtered down to target species
         names=UNIPROT_ID_MAPPING_SELECTED_COLUMNS,
         compression="gzip",
         sep="\t",
         low_memory=False,
-        dtype="string",
     )
     uniprot_to_ncbi = df_mappings(
         df=uniprot_df,
@@ -260,7 +260,7 @@ def generate_gene_mappings() -> DataFrame:
         filter_ids=[9031, 9615, 9913, 9823, 227321],
         entity_delimiter=";",
     )
-    print(len(uniprot_to_ncbi))
+    print(f"Generated {len(uniprot_to_ncbi)} UniProtKB-NCBIGene Gene mappings")
     assert len(uniprot_to_ncbi) > 70000
     mapping_dataframes.append(uniprot_to_ncbi)
 

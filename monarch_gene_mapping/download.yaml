@@ -29,12 +29,12 @@
   #  -s SOURCE, --source SOURCE
   #                        Source root data file name (default: 'idmapping_selected.tab')
   #  -t TARGET, --target TARGET
-  #                        Target root data file name (default: 'idmapping.tsv')
+  #                        Target root data file name (default: 'idmapping_filtered.tsv')
   #  -n NUMBER_OF_LINES, --number_of_lines NUMBER_OF_LINES
   #                        Maximum (positive) number of lines to process; n == 0 implies 'process all' (default: 0 == 'all')
   #
   # NOTE: the above scripts assume default values that convert the 'data/uniprot/idmapping_selected.tab.gz' to a
-  #       taxonomically-filtered file named 'data/uniprot/idmapping.tsv.gz'
+  #       taxonomically-filtered file named 'data/uniprot/idmapping_filtered.tsv.gz'
   #       The set of target species is currently hard-coded at the top of this filter script.
 -
   url: https://ftp.uniprot.org/pub/databases/uniprot/knowledgebase/idmapping/idmapping_selected.tab.gz

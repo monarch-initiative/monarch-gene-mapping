@@ -20,7 +20,7 @@ def _download():
 def preprocess_uniprot_mappings(
     directory: str = typer.Option(f"..{sep}data{sep}uniprot", help="Data Directory"),
     source_filename: str = typer.Option("idmapping_selected.tab", help="Target File Name"),
-    target_filename: str = typer.Option("idmapping.tsv", help="Target File Name"),
+    target_filename: str = typer.Option("idmapping_filtered.tsv", help="Target File Name"),
     number_of_lines: int = typer.Option(0, help="Number of Lines"),
 ):
     filter_uniprot_id_mapping_file(
@@ -46,7 +46,7 @@ def generate(
         filter_uniprot_id_mapping_file(
             directory="data/uniprot",
             source_filename="idmapping_selected.tab",
-            target_filename="idmapping.tsv",
+            target_filename="idmapping_filtered.tsv",
             number_of_lines=0,
         )
 

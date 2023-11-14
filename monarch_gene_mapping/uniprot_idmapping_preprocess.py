@@ -129,7 +129,7 @@ if __name__ == "__main__":
         help="Source root data file name (default: 'idmapping_selected.tab')",
     )
     parser.add_argument(
-        "-t", "--target", default="idmapping.tsv", help="Target root data file name (default: 'idmapping.tsv')"
+        "-t", "--target", default="idmapping_filtered.tsv", help="Target root data file name (default: 'idmapping_filtered.tsv')"
     )
     parser.add_argument(
         "-n",

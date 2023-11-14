@@ -1,32 +1,41 @@
 name: Generate Monarch Gene Mapping
 on:
+  pull_request:
   workflow_dispatch:
   push:
-    branches: [ main, scheduled-action ]
-  schedule:
-    - cron: "0 6 * * MON"
+    branches: [main]
 
 jobs:
-  diff:
-    # Do not run on forks 
-    if: github.repository_owner == 'monarch-initiative'
-    runs-on: ubuntu-latest
+  test-backend:
+    runs-on: ${{ matrix.os }}
     strategy:
-      max-parallel: 1
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+        os: [ubuntu-latest]
+        #os: [ ubuntu-latest, windows-latest ]
+
     steps:
-      - 
-        name: Checkout main branch
-        uses: actions/checkout@v2
-      - 
-        name: Setup environment
-        run:  |
-          pip install --upgrade requests
-          export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
-          pip install poetry
-          poetry install 
-      - 
-        name: Generate mapping
-        run: | 
-          poetry run gene-mapping generate --download
-          ls -al output/
-          head output/gene_mappings.tsv
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      #----------------------------------------------
+      #          install & configure poetry
+      #----------------------------------------------
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
+      #----------------------------------------------
+      #    install your root project, if required
+      #----------------------------------------------
+      - name: Install library
+        run: poetry install --no-interaction
+
+      #----------------------------------------------
+      #              run pytest
+      #----------------------------------------------
+      - name: Run tests
+        run: poetry run pytest

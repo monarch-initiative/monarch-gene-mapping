@@ -191,7 +191,7 @@ def generate_gene_mappings() -> DataFrame:
     assert len(hgnc_to_omim) > 16000
     mapping_dataframes.append(hgnc_to_omim)
 
-    print("Generating HGNC to UniProtKB mappings...")
+    print("\nGenerating HGNC to UniProtKB mappings...")
     hgnc_to_uniprot = df_mappings(
         df=explode_column(hgnc_df, "uniprot_ids", "|"),
         subject_column="hgnc_id",
@@ -219,7 +219,7 @@ def generate_gene_mappings() -> DataFrame:
 
     ### NCBI mappings
 
-    print("Generating NCBIGene to ENSEMBL Gene mappings...")
+    print("\nGenerating NCBIGene to ENSEMBL Gene mappings...")
     ensembl_df = pd.read_csv("data/ncbi/gene2ensembl.gz", compression="gzip", sep="\t")
     ensembl_to_ncbi = df_mappings(
         df=ensembl_df,
@@ -239,7 +239,7 @@ def generate_gene_mappings() -> DataFrame:
 
     ### UniProtKB mappings
 
-    print("Generating UniProtKB to NCBI Gene mappings...")
+    print("\nGenerating UniProtKB to NCBI Gene mappings...")
     uniprot_df = pd.read_csv(
         "data/uniprot/idmapping_filtered.tsv.gz",  # filtered down to target species
         names=UNIPROT_ID_MAPPING_SELECTED_COLUMNS,

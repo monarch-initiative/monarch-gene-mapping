@@ -54,7 +54,7 @@ def generate(
     pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
     mappings = generate_gene_mappings()
 
-    print(f"Results saved in {output_dir}/gene_mappings.sssom.tsv")
+    print(f"\nResults saved in {output_dir}/gene_mappings.sssom.tsv")
     mappings.to_csv(f"{output_dir}/gene_mappings.sssom.tsv", sep="\t", index=False)
 
 

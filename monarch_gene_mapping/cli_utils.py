@@ -57,6 +57,7 @@ def df_mappings(
     :param subject_column: Column containing subject ID's
     :param object_column: Column containing object ID's
     :param predicate_id: String for predicate ID
+    :param entity_delimiter: Delimiter for splitting IDs
     :param mapping_justification: String for mapping justification
     :param filter_column: Column to filter DataFrame on
     :param filter_ids:
@@ -72,8 +73,8 @@ def df_mappings(
         # Create copy so we don't modify the original DataFrame
         df_filtered = df.copy()
 
-    df_filtered.loc[:, "predicate_id"] = predicate_id
-    df_filtered.loc[:, "mapping_justification"] = mapping_justification
+    df_filtered["predicate_id"] = predicate_id
+    df_filtered["mapping_justification"] = mapping_justification
 
     columns = {subject_column: "subject_id", object_column: "object_id"}
     select_columns = ["subject_id", "predicate_id", "object_id", "mapping_justification"]
@@ -108,8 +109,12 @@ def explode_column(df: DataFrame, column: str, delimiter: str) -> DataFrame:
     :param delimiter: Delimiter for splitting column
     :return:
     """
+    # cast columns to string
+    df = df.astype({column:"str"})
+
     assign_kwargs = {column: df[column].str.split(delimiter)}
     df_exploded = df.assign(**assign_kwargs).explode(column).copy()
+
     # remove whitespace
     df_exploded[column] = df_exploded[column].str.strip()
     return df_exploded
@@ -240,6 +245,7 @@ def generate_gene_mappings() -> DataFrame:
         compression="gzip",
         sep="\t",
         low_memory=False,
+        dtype="string",
     )
     uniprot_to_ncbi = df_mappings(
         df=uniprot_df,
@@ -254,6 +260,7 @@ def generate_gene_mappings() -> DataFrame:
         filter_ids=[9031, 9615, 9913, 9823, 227321],
         entity_delimiter=";",
     )
+    print(len(uniprot_to_ncbi))
     assert len(uniprot_to_ncbi) > 70000
     mapping_dataframes.append(uniprot_to_ncbi)
 

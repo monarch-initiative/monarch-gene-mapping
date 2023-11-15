@@ -1,6 +1,8 @@
+from typing import List
+
+import numpy as np
 import pandas as pd
 from pandas.core.frame import DataFrame
-from typing import List
 
 # The UniProtKB mapping tsv file lacks a header line
 UNIPROT_ID_MAPPING_SELECTED_COLUMNS = [
@@ -71,7 +73,6 @@ def df_mappings(
         df_filtered = df.loc[df[filter_column].isin(filter_ids), :].copy()
     else:
         # Create copy so we don't modify the original DataFrame
-        import numpy as np
         df_filtered = df.copy()
 
     df_filtered["predicate_id"] = predicate_id
@@ -82,13 +83,11 @@ def df_mappings(
     df_select = df_filtered.rename(columns=columns).loc[:, select_columns].copy()
 
     # Create a copy of the DataFrame with unmapped values
-    df_unmapped = df_select[df_select['subject_id'].isna() | df_select['object_id'].isna()]
-    print(f"Unmapped rows: \n{df_unmapped}\n")
+    # df_unmapped = df_select[df_select['subject_id'].isna() | df_select['object_id'].isna()]
 
     # Drop rows with missing values
     df_select = df_select.dropna(subset=["subject_id", "object_id"], how="any")
     df_select = df_select.drop_duplicates()
-    print(df_select)
 
     # Expand rows with semicolon in subject_id or object_id to multiple rows
     df_select = explode_column(df_select, "subject_id", entity_delimiter)
@@ -111,11 +110,11 @@ def explode_column(df: DataFrame, column: str, delimiter: str) -> DataFrame:
     :param delimiter: Delimiter for splitting column
     :return:
     """
-    # cast columns to string
-    str_df = df.astype({column: "str"}, copy=True)
+    # cast non-null items in column to string
+    df[column] = np.where(pd.isnull(df[column]),df[column],df[column].astype(str))
 
-    assign_kwargs = {column: str_df[column].str.split(delimiter)}
-    df_exploded = str_df.assign(**assign_kwargs).explode(column).copy()
+    assign_kwargs = {column: df[column].str.split(delimiter)}
+    df_exploded = df.assign(**assign_kwargs).explode(column).copy()
 
     # remove whitespace
     df_exploded[column] = df_exploded[column].str.strip()
@@ -163,7 +162,7 @@ def generate_gene_mappings() -> DataFrame:
     print("Generating Alliance mappings...")
     alliance_mappings = alliance_mapping()
     print(f"Generated {len(alliance_mappings)} Alliance mappings")
-    # assert len(alliance_mappings) > 400000
+    assert len(alliance_mappings) > 400000
     mapping_dataframes.append(alliance_mappings)
 
     ### HGNC mappings
@@ -179,7 +178,7 @@ def generate_gene_mappings() -> DataFrame:
         mapping_justification="semapv:UnspecifiedMatching",
     )
     print(f"Generated {len(hgnc_to_ncbi)} HGNC-NCBI Gene mappings")
-    # assert len(hgnc_to_ncbi) > 40000
+    assert len(hgnc_to_ncbi) > 40000
     mapping_dataframes.append(hgnc_to_ncbi)
 
     print("\nGenerating HGNC to OMIM mappings...")
@@ -192,7 +191,7 @@ def generate_gene_mappings() -> DataFrame:
         mapping_justification="semapv:UnspecifiedMatching",
     )
     print(f"Generated {len(hgnc_to_omim)} HGNC-OMIM mappings")
-    # assert len(hgnc_to_omim) > 16000
+    assert len(hgnc_to_omim) > 16000
     mapping_dataframes.append(hgnc_to_omim)
 
     print("\nGenerating HGNC to UniProtKB mappings...")
@@ -205,7 +204,7 @@ def generate_gene_mappings() -> DataFrame:
         mapping_justification="semapv:UnspecifiedMatching",
     )
     print(f"Generated {len(hgnc_to_uniprot)} HGNC-UniProtKB mappings")
-    # assert len(hgnc_to_uniprot) > 20000
+    assert len(hgnc_to_uniprot) > 20000
     mapping_dataframes.append(hgnc_to_uniprot)
 
     print("\nGenerating HGNC to ENSEMBL Gene mappings...")
@@ -218,7 +217,7 @@ def generate_gene_mappings() -> DataFrame:
         mapping_justification="semapv:UnspecifiedMatching",
     )
     print(f"Generated {len(hgnc_to_ensemble)} HGNC-ENSEMBL Gene mappings")
-    # assert len(hgnc_to_ensemble) > 40000
+    assert len(hgnc_to_ensemble) > 40000
     mapping_dataframes.append(hgnc_to_ensemble)
 
     ### NCBI mappings
@@ -238,7 +237,7 @@ def generate_gene_mappings() -> DataFrame:
         filter_ids=[9031, 9615, 9913, 9823, 227321],
     )
     print(f"Generated {len(ensembl_to_ncbi)} ENSEMBL-NCBIGene Gene mappings")
-    # assert len(ensembl_to_ncbi) > 70000
+    assert len(ensembl_to_ncbi) > 70000
     mapping_dataframes.append(ensembl_to_ncbi)
 
     ### UniProtKB mappings
@@ -265,9 +264,11 @@ def generate_gene_mappings() -> DataFrame:
         entity_delimiter=";",
     )
     print(f"Generated {len(uniprot_to_ncbi)} UniProtKB-NCBIGene Gene mappings")
-    # assert len(uniprot_to_ncbi) > 70000
+    assert len(uniprot_to_ncbi) > 70000
     mapping_dataframes.append(uniprot_to_ncbi)
 
     mappings = pd.concat(mapping_dataframes)
-
+    for row in mappings.itertuples():
+        assert not ("<NA>" in row.subject_id)
+        assert not ("<NA>" in row.object_id)
     return mappings

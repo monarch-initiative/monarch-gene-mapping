@@ -1,7 +1,8 @@
 """
-A few unit tests for pieces of the mapping framework
+Unit tests for the UniProt ID mapping preprocessing
 """
 from typing import Tuple
+
 import pytest
 
 from monarch_gene_mapping.uniprot_idmapping_preprocess import target_taxon

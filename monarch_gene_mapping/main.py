@@ -1,12 +1,15 @@
 from os import sep
 import typer
 import pathlib
+
+from curies import get_obo_converter
 from kghub_downloader.download_utils import download_from_yaml
+
 from monarch_gene_mapping.cli_utils import generate_gene_mappings
 from monarch_gene_mapping.uniprot_idmapping_preprocess import filter_uniprot_id_mapping_file
 
 typer_app = typer.Typer()
-
+converter = get_obo_converter()
 
 @typer_app.command(name="download")
 def _download():
@@ -54,8 +57,12 @@ def generate(
     pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
     mappings = generate_gene_mappings()
 
-    print(f"\nResults saved in {output_dir}/gene_mappings.sssom.tsv")
+    print("\nStandardizing CURIEs...\n")
+    converter.pd_standardize_curie(mappings, column="subject_id")
+    converter.pd_standardize_curie(mappings, column="object_id")
+
     mappings.to_csv(f"{output_dir}/gene_mappings.sssom.tsv", sep="\t", index=False)
+    print(f"\nResults saved in {output_dir}/gene_mappings.sssom.tsv")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-name: Generate Monarch Gene Mapping
+name: Test Gene Mapping Utils
 on:
   pull_request:
   workflow_dispatch:

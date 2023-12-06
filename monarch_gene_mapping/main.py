@@ -2,14 +2,14 @@ from os import sep
 import typer
 import pathlib
 
-from curies import get_obo_converter
 from kghub_downloader.download_utils import download_from_yaml
+from sssom.context import get_converter
 
 from monarch_gene_mapping.cli_utils import generate_gene_mappings
 from monarch_gene_mapping.uniprot_idmapping_preprocess import filter_uniprot_id_mapping_file
 
 typer_app = typer.Typer()
-converter = get_obo_converter()
+converter = get_converter()
 
 @typer_app.command(name="download")
 def _download():

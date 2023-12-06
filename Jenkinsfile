@@ -11,9 +11,18 @@ pipeline {
                 sh 'poetry install'
             }
         }
+        stage('download') {
+            steps {
+                sh '''
+                poetry run gene-mapping download
+                ls -lasdf
+                ls -la data
+                '''
+            }
+        }
         stage('generate-mapping-file') {
             steps {
-                sh 'poetry run gene-mapping generate --download --preprocess-uniprot'
+                sh 'poetry run gene-mapping generate --preprocess-uniprot'
             }
         }
         stage('upload-mapping-file'){

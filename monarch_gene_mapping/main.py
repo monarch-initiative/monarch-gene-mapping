@@ -15,6 +15,7 @@ sssom_converter = get_converter()
 
 prefixes = {
     "HGNC": "https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/",
+    "WB": "https://wormbase.org/",
 }
 gene_converter = Converter.from_prefix_map(prefixes)
 converter = chain([sssom_converter, gene_converter])
